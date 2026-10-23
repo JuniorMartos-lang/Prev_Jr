@@ -1,0 +1,895 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Prev Jr</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg">
+<link rel="apple-touch-icon" href="icon.svg">
+<meta name="theme-color" content="#4338ca">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<script>
+// Tema (Ajustes → Aparência): 'auto' segue o celular. Roda antes de desenhar a tela, para não piscar.
+function aplicarTema() {
+  let t = 'auto'; try { t = localStorage.getItem('prev-jr-tema') || 'auto'; } catch {}
+  const escuro = t === 'escuro' || (t === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+  document.documentElement.dataset.theme = escuro ? 'dark' : 'light';
+}
+aplicarTema();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', aplicarTema);
+</script>
+<style>
+:root { --bg:#f5f6f8; --card:#fff; --tx:#16181d; --mut:#6b7280; --bd:#e5e7eb; --pri:#4338ca; --up:#15803d; --dn:#b91c1c; }
+:root[data-theme=dark] { color-scheme:dark; --bg:#0f1115; --card:#1a1d23; --tx:#e8eaed; --mut:#9aa0a6; --bd:#2b2f36; --pri:#a5b4fc; --up:#4ade80; --dn:#f87171; }
+* { box-sizing: border-box; }
+body { margin:0; background:var(--bg); color:var(--tx); font:15px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; padding-bottom:72px; }
+/* topo: faixa na cor do app; o cartão da posição sobe por cima dela */
+header { background:var(--pri); color:#fff; padding:12px 16px 40px; padding-top:max(12px, env(safe-area-inset-top));
+  display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:52px; }
+:where(:root[data-theme=dark]) header { color:#1e1b4b; }
+header b { font-size:14px; line-height:1.25; } /* nome longo: quebra em 2 linhas no celular */
+#hRef { flex:none; }
+#hRef { font-size:12px; }
+#topo { max-width:640px; margin:-34px auto 0; padding:0 16px; }
+.posCard { padding:12px 14px; margin-bottom:0; }
+#hPos { font-size:28px; font-weight:600; margin:2px 0 4px; font-variant-numeric:tabular-nums; }
+.posCard .row { align-items:center; }
+.posCard b { font-weight:600; font-variant-numeric:tabular-nums; }
+.posCard .divide { margin-top:10px; padding-top:8px; border-top:1px solid var(--bd); }
+.pill { font-size:13px; font-weight:600; padding:2px 8px; border-radius:6px; }
+.pill.up { background:color-mix(in srgb, var(--up) 15%, transparent); }
+.pill.dn { background:color-mix(in srgb, var(--dn) 15%, transparent); }
+#hMes { font-size:13px; }
+/* "acumulado desde ..." e "Mês" sem quebrar o texto; se não couberem lado a lado, o Mês desce para a linha de baixo */
+#hPct, #hMes { white-space:nowrap; }
+.posCard .row:has(#hPct) { flex-wrap:wrap; row-gap:4px; }
+main { padding:12px 16px; max-width:640px; margin:0 auto; }
+.card { background:var(--card); border:1px solid var(--bd); border-radius:12px; padding:12px 14px; margin-bottom:10px; }
+.row { display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+.tk { font-weight:700; font-size:17px; }
+.mut { color:var(--mut); font-size:13px; }
+.up { color:var(--up); } .dn { color:var(--dn); }
+/* dados do card: uma informação por linha, nome à esquerda e valor à direita */
+.grid { margin-top:6px; font-size:14px; }
+.grid > div { display:flex; justify-content:space-between; gap:8px; padding:3px 0; border-top:1px dashed var(--bd); }
+.grid > div > :last-child { text-align:right; font-variant-numeric:tabular-nums; }
+.lista .card, .lista tr[data-ym] { cursor:pointer; }
+#lSim .grid > div > :last-child { white-space:nowrap; } /* "% · saldo" numa linha; o rótulo é que quebra */
+label.check { display:flex; align-items:center; gap:8px; margin:0 0 8px; color:var(--tx); font-size:14px; }
+label.check input { width:auto; margin:0; }
+/* senha: tela de bloqueio cobre tudo, inclusive o menu */
+#trava { position:fixed; inset:0; z-index:100; background:var(--bg); display:flex; align-items:center; justify-content:center; padding:16px; }
+#trava label.check, #senhaCard label.check { margin-top:10px; }
+.codigo { margin-top:12px; padding:12px; border:2px dashed var(--pri); border-radius:10px; }
+#sCodigo { font:700 22px/1.4 ui-monospace, monospace; letter-spacing:2px; text-align:center; margin:8px 0; }
+/* Posição → Resumido: uma linha por mês; valores sem "R$" (só no título) para caber em 375 px */
+.resumo th { white-space:normal; font-weight:600; vertical-align:bottom; }
+.resumo { font-size:12px; }
+/* Acumulada: quadro com título, filtros (inicial | final | Todos numa linha) e a tabela encostada nas bordas */
+.grupo { overflow:hidden; }
+.filtros { display:grid; grid-template-columns:1fr 1fr auto; gap:6px; align-items:end; margin-bottom:8px; }
+.filtros > div { min-width:0; }
+.filtros label { margin-top:4px; }
+.filtros input, .filtros select { padding:8px 4px 8px 6px; font-size:12px; }
+.filtros input::-webkit-calendar-picker-indicator { margin:0; padding:0; }
+/* no celular tocar no campo já abre o calendário: sem o ícone, "setembro de 2026" cabe inteiro */
+@media (pointer:coarse) { .filtros input::-webkit-calendar-picker-indicator { display:none; } }
+.filtros button { padding:8px 8px; font-size:13px; }
+.grupo .rolagem { margin:0 -14px -12px; border-top:1px solid var(--bd); }
+.acum th { white-space:normal; vertical-align:bottom; } /* "Real (S. Conv)" quebra em 2 linhas */
+/* linha Soma fica sempre visível no pé da tabela, mesmo rolando */
+tr.soma td { border-top:2px solid var(--tx); border-bottom:0; font-weight:700; position:sticky; bottom:0; background:var(--card); z-index:1; }
+/* Aporte: cabeçalho em 2 linhas (Participante | Cargill); as duas ficam fixas ao rolar; rola para o lado com o Mês fixo */
+.dupla tr:first-child th { height:24px; text-align:center; }
+.dupla tr:nth-child(2) th { top:24px; left:auto; z-index:1; }
+.dupla .g { border-left:1px solid var(--bd); }
+.dupla { font-size:11px; }
+.dupla td, .dupla th { padding-left:1px; padding-right:1px; }
+.dupla td.g, .dupla th.g { padding-left:3px; }
+.resumo td, .resumo th { padding:6px 2px; }
+.rolagem .resumo td:first-child, .rolagem .resumo th:first-child { padding-left:6px; }
+.resumo td:last-child, .resumo th:last-child { padding-right:6px; }
+button, .btn { font:inherit; border:0; border-radius:10px; padding:11px 14px; background:var(--pri); color:#fff; font-weight:600; cursor:pointer; }
+:where(:root[data-theme=dark]) button, :where(:root[data-theme=dark]) .btn { color:#1e1b4b; }
+button.sec { background:transparent; color:var(--pri); border:1px solid var(--bd); }
+button.link { background:none; color:var(--dn); padding:8px 6px; font-weight:500; width:100%; }
+label { display:block; font-size:13px; color:var(--mut); margin:8px 0 3px; }
+input, select { width:100%; font:inherit; padding:10px; border:1px solid var(--bd); border-radius:8px; background:var(--card); color:var(--tx); }
+.two { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.two > div { min-width:0; }
+.tres { display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; align-items:end; } /* nomes longos quebram a linha: campos alinhados por baixo */
+.tres > div { min-width:0; }
+/* % do mês do Participante: campo menor com o botão Replicar ao lado */
+.comBotao { display:flex; gap:6px; }
+.comBotao input { flex:1; min-width:0; }
+.comBotao button { padding:8px 10px; font-size:13px; flex:none; }
+/* Posição: um cartão por parte (Participante / Cargill), lado a lado */
+.partes { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px; }
+.partes .card { margin:0; padding:10px 12px; font-size:13px; }
+.partes .card .grid { font-size:13px; }
+.partes .card .grid > div { flex-direction:column; gap:0; }
+.partes .card .grid > div > :last-child { text-align:left; }
+.parte { margin-top:10px; padding-top:8px; border-top:1px solid var(--bd); }
+nav { position:fixed; bottom:0; left:0; right:0; display:flex; background:var(--card); border-top:1px solid var(--bd); padding-bottom:env(safe-area-inset-bottom);
+  z-index:10; } /* acima dos títulos fixos das tabelas (z-index 1–2), senão eles aparecem por cima do menu ao rolar */
+nav button { flex:1; background:none; color:var(--mut); border-radius:0; padding:8px 0 10px; font-weight:500; font-size:12px;
+  display:flex; flex-direction:column; align-items:center; gap:3px; }
+nav svg { width:22px; height:22px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+nav button.on { color:var(--pri); font-weight:700; }
+table { width:100%; border-collapse:collapse; font-size:13px; font-variant-numeric:tabular-nums; }
+td, th { padding:6px 4px; text-align:right; border-bottom:1px solid var(--bd); white-space:nowrap; }
+td:first-child, th:first-child { text-align:left; }
+/* tabela: rola nos dois sentidos; cabeçalho e coluna do mês ficam fixos */
+.rolagem { overflow:auto; max-height:60vh; padding:0; }
+.rolagem th { position:sticky; top:0; background:var(--card); z-index:1; }
+.rolagem td:first-child, .rolagem th:first-child { position:sticky; left:0; background:var(--card); padding-left:10px; }
+.rolagem th:first-child { z-index:2; }
+h2 { font-size:15px; margin:18px 0 8px; color:var(--mut); font-weight:600; }
+.msg { font-size:13px; margin-top:8px; }
+.msg:empty { display:none; }
+[hidden] { display:none !important; }
+/* botão "i" ao lado de um rótulo: abre a explicação do número */
+button.i { width:20px; height:20px; padding:0; border-radius:50%; background:transparent; color:var(--pri); border:1.5px solid currentColor;
+  font:700 12px/1 Georgia, serif; font-style:italic; vertical-align:middle; margin-left:4px; flex:none; }
+:where(:root[data-theme=dark]) button.i { color:var(--pri); }
+dialog { border:1px solid var(--bd); border-radius:12px; background:var(--card); color:var(--tx); width:360px; max-width:calc(100vw - 32px); padding:16px; }
+dialog::backdrop { background:rgba(0,0,0,.45); }
+dialog h3 { margin:0 0 8px; font-size:16px; }
+dialog p { margin:8px 0; font-size:14px; }
+dialog table td:first-child { white-space:normal; }
+</style>
+</head>
+<body>
+<header>
+  <b>Previdência e Cooperativa Antonio Carlos Martos Junior</b>
+  <span id="hRef"></span>
+</header>
+<div id="topo">
+  <div class="card posCard">
+    <div class="mut">Posição atual</div>
+    <div id="hPos">—</div>
+    <div class="row"><span><span id="hPct" class="pill"></span><button class="i" data-info="acum" aria-label="Como é calculado o acumulado">i</button></span><span id="hMes"></span></div>
+    <div class="row divide"><span><span class="mut">Total aportado</span><button class="i" data-info="aportado" aria-label="O que entra no total aportado">i</button><br><b id="hApo"></b></span>
+      <span style="text-align:right"><span class="mut">Lucro Acumulado Total</span><button class="i" data-info="lucro" aria-label="Como é calculado o lucro acumulado total">i</button><br><b id="hLuc"></b></span></div>
+  </div>
+</div>
+
+<main>
+  <div class="msg dn" id="lembrete"></div>
+
+  <!-- Posição real: lançar o mês e ver a lista -->
+  <section id="tab-posicao">
+    <div class="partes" id="pPartes"></div>
+    <h2>Meses lançados <span class="mut">(toque para editar na aba Aporte)</span></h2>
+    <div class="two">
+      <div><label for="pDe">Mês inicial</label><input id="pDe" type="month"></div>
+      <div><label for="pAte">Mês final</label><input id="pAte" type="month"></div>
+    </div>
+    <div class="row" style="align-items:center; margin:8px 0">
+      <label class="check" style="margin:0"><input type="checkbox" id="pResumido"> Resumido (uma linha por mês)</label>
+      <button id="pTodos" class="sec" style="padding:6px 10px">Todos</button>
+    </div>
+    <div class="msg dn" id="pFiltroMsg"></div>
+    <div id="lPos" class="lista"></div>
+    <button id="pExp" class="sec" style="width:100%; margin:0 0 10px" hidden>Exportar para Excel</button>
+  </section>
+
+  <!-- Aporte: lançar / editar o mês (contribuição, % e saldo de cada parte) -->
+  <section id="tab-aporte" hidden>
+    <div class="card" id="fCard">
+      <b id="fTit">Lançar mês</b>
+      <label for="fMes">Mês</label><input id="fMes" type="month">
+      <p class="mut">O saldo é calculado sozinho (saldo anterior + % do mês + contribuição). Se o extrato mostrar outro valor, digite o do extrato.</p>
+      <div id="fPartes"></div>
+      <div class="two" style="margin-top:12px"><button id="fSalvar">Salvar</button><button id="fLimpar" class="sec">Limpar</button></div>
+      <button id="fExcluir" class="link" hidden>Excluir este mês</button>
+      <div class="msg" id="fMsg"></div>
+    </div>
+    <h2>Valores lançados <span class="mut">(toque na linha para editar)</span></h2>
+    <div class="two">
+      <div><label for="apDe">Mês inicial</label><input id="apDe" type="month"></div>
+      <div><label for="apAte">Mês final</label><input id="apAte" type="month"></div>
+    </div>
+    <div class="row" style="justify-content:flex-end; margin:8px 0"><button id="apTodos" class="sec" style="padding:6px 10px">Todos</button></div>
+    <div class="msg dn" id="apMsg"></div>
+    <div id="lAp" class="lista"></div>
+    <button id="apExp" class="sec" style="width:100%; margin:0 0 10px" hidden>Exportar para Excel</button>
+  </section>
+
+  <!-- Simulação: % de cada modalidade mês a mês -->
+  <section id="tab-simul" hidden>
+    <div class="card">
+      <b>Se tivesse escolhido…</b>
+      <div class="grid" id="sResumo"></div>
+    </div>
+    <div class="card" id="sCard">
+      <b>Lançar % do mês</b>
+      <label for="sMes">Mês</label><input id="sMes" type="month">
+      <div class="tres" id="sCampos"></div>
+      <div class="two" style="margin-top:12px"><button id="sSalvar">Salvar</button><button id="sLimpar" class="sec">Limpar</button></div>
+      <div class="msg" id="sMsg"></div>
+    </div>
+    <h2>Mês a mês <span class="mut">(% do mês · saldo projetado)</span></h2>
+    <div id="lSim" class="lista"></div>
+  </section>
+
+  <!-- Rentabilidade acumulada -->
+  <section id="tab-acum" hidden>
+    <div class="card">
+      <b>Rentabilidade acumulada</b> <span class="mut" id="aSub">(soma dos % mensais)</span>
+      <div class="grid" id="aResumo"></div>
+    </div>
+    <!-- cada tabela num quadro, com os filtros na mesma linha do Todos -->
+    <div class="card grupo">
+      <b>Por ano</b>
+      <div class="filtros">
+        <div><label for="anoDe">Ano inicial</label><select id="anoDe"></select></div>
+        <div><label for="anoAte">Ano final</label><select id="anoAte"></select></div>
+        <button id="anoTodos" class="sec">Todos</button>
+      </div>
+      <div class="msg dn" id="anoMsg"></div>
+      <div class="rolagem"><table id="aAno" class="acum"></table></div>
+    </div>
+    <div class="card grupo">
+      <b>Acumulado mês a mês</b>
+      <div class="filtros">
+        <div><label for="acDe">Mês inicial</label><input id="acDe" type="month"></div>
+        <div><label for="acAte">Mês final</label><input id="acAte" type="month"></div>
+        <button id="acTodos" class="sec">Todos</button>
+      </div>
+      <div class="msg dn" id="acMsg"></div>
+      <div class="rolagem"><table id="aTab" class="acum"></table></div>
+    </div>
+    <button id="acExp" class="sec" style="width:100%; margin:0 0 10px">Exportar para Excel</button>
+    <p class="mut" id="acLegenda" style="margin:0 0 10px"></p>
+  </section>
+
+  <section id="tab-config" hidden>
+    <div class="card">
+      <b>Saldo inicial (antes do primeiro mês lançado)</b>
+      <div class="two" id="cIni"></div>
+      <p class="mut">É a base do lucro do 1º mês e o ponto de partida das projeções.</p>
+      <button id="cSalvarIni">Salvar</button>
+      <div class="msg" id="cIniMsg"></div>
+    </div>
+    <div class="card">
+      <label for="cTema">Aparência</label>
+      <select id="cTema"><option value="auto">Automático (igual ao celular)</option><option value="claro">Claro</option><option value="escuro">Escuro</option></select>
+    </div>
+    <div class="card" id="senhaCard">
+      <b>Senha do app</b>
+      <p class="mut" id="sStatus"></p>
+      <div id="sAtualBox"><label for="sAtual">Senha atual</label><input id="sAtual" type="password" autocomplete="current-password"></div>
+      <label for="sNova">Nova senha (mínimo 4 caracteres)</label><input id="sNova" type="password" autocomplete="new-password">
+      <label for="sConf">Repita a nova senha</label><input id="sConf" type="password" autocomplete="new-password">
+      <label class="check"><input type="checkbox" class="verSenha"> Mostrar senha</label>
+      <div class="two" style="margin-top:10px">
+        <button id="sSalvarSenha">Criar senha</button>
+        <button id="sRemover" class="sec">Remover senha</button>
+      </div>
+      <label class="check" id="sBioBox"><input type="checkbox" id="sBio"> Entrar com a digital / rosto do celular</label>
+      <div class="msg" id="sSenhaMsg"></div>
+      <div id="sCodigoBox" class="codigo" hidden>
+        <b>Seu código de recuperação</b>
+        <div id="sCodigo"></div>
+        <p class="mut">Anote ou tire foto e guarde fora do celular. Se esquecer a senha, é com ele que você cria outra. Ele só aparece agora.</p>
+        <button id="sCodigoOk" class="sec" style="width:100%">Já anotei</button>
+      </div>
+    </div>
+    <div class="card">
+      <b>Backup</b>
+      <p class="mut">Os dados ficam neste celular. Toque em Salvar backup e escolha o OneDrive (e a pasta) na tela de compartilhar. Para restaurar, toque em Restaurar e escolha o arquivo.</p>
+      <p class="mut" id="ultBackup"></p>
+      <div class="two">
+        <button id="btnExp">Salvar backup</button>
+        <button id="btnImp" class="sec">Restaurar</button>
+      </div>
+      <input type="file" id="fileImp" accept=".txt,.json,text/plain,application/json" hidden>
+      <div class="msg" id="cMsg"></div>
+    </div>
+    <!-- versão: MAIOR.MÉDIO.MENOR (ver CLAUDE.md); atualizar a cada publicação -->
+    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Prev Jr · versão 1.0.0 · 23/10/2026</p>
+  </section>
+</main>
+
+<!-- tela de bloqueio: aparece ao abrir o app quando há senha -->
+<div id="trava" hidden>
+  <form class="card" id="tForm" style="width:100%; max-width:360px">
+    <div style="text-align:center"><b style="font-size:18px">Prev Jr</b><p class="mut">Digite sua senha para entrar</p></div>
+    <div id="tEntrar">
+      <input id="tSenha" type="password" autocomplete="current-password" aria-label="Senha">
+      <label class="check"><input type="checkbox" class="verSenha"> Mostrar senha</label>
+      <button style="width:100%; margin-top:12px">Entrar</button>
+      <button type="button" id="tBio" class="sec" style="width:100%; margin-top:8px" hidden>Entrar com a digital</button>
+      <button type="button" id="tEsqueci" class="link" style="width:100%; margin-top:8px; color:var(--pri)">Esqueci a senha</button>
+    </div>
+    <div id="tRecuperar" hidden>
+      <label for="tCodigo">Código de recuperação</label><input id="tCodigo" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="XXXX-XXXX-XXXX">
+      <label for="tNova">Nova senha (mínimo 4 caracteres)</label><input id="tNova" type="password" autocomplete="new-password">
+      <label for="tConf">Repita a nova senha</label><input id="tConf" type="password" autocomplete="new-password">
+      <label class="check"><input type="checkbox" class="verSenha"> Mostrar senha</label>
+      <button style="width:100%; margin-top:12px">Criar nova senha e entrar</button>
+      <button type="button" id="tVoltar" class="link" style="width:100%; margin-top:8px; color:var(--pri)">Voltar</button>
+    </div>
+    <div class="msg dn" id="tMsg"></div>
+  </form>
+</div>
+
+<!-- explicação aberta pelos botões "i" -->
+<dialog id="info"><div id="infoTxt"></div><button id="infoOk" style="width:100%; margin-top:12px">Fechar</button></dialog>
+
+<nav>
+  <button data-tab="posicao" class="on"><svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M16 6V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>Posição</button>
+  <button data-tab="aporte"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>Aporte</button>
+  <button data-tab="simul"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 6-7"/></svg>Simulação</button>
+  <button data-tab="acum"><svg viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>Acumulada</button>
+  <button data-tab="config"><svg viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>Ajustes</button>
+</nav>
+
+<!-- "?v=" = versão do app: o celular baixa o calc.js novo junto com a tela nova (sem misturar com a cópia antiga do cache) -->
+<script src="calc.js?v=1.0.0"></script>
+<script>
+const KEY = 'prev-jr';
+const vazio = { saldoInicial: { part: 0, cgl: 0 }, meses: [], ultimoBackup: null };
+let db;
+try { db = { ...vazio, ...JSON.parse(localStorage.getItem(KEY)) }; } catch { db = { ...vazio }; }
+const salvar = () => localStorage.setItem(KEY, JSON.stringify(db));
+
+const $ = id => document.getElementById(id);
+const brl = n => n == null ? '—' : n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const fmt = (n, d = 2) => n.toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d });
+const pct = n => n == null ? '—' : fmt(n * 100) + '%';   // n em fração (0.01 = 1%)
+const cor = n => n >= 0 ? 'up' : 'dn';
+const seta = n => `<b class="${cor(n)}">${n >= 0 ? '▲ +' : '▼ '}${pct(n)}</b>`;
+const dif = n => `<span class="${cor(n)}">${n >= 0 ? '+' : ''}${brl(n)}</span>`;
+// aceita "1.234,56", "1.000" (mil) e "40.75"; com vírgula, ou em grupos de 3 ("1.000.000"), o ponto é separador de milhar. Vazio = NaN.
+const num = s => {
+  s = String(s).replace(/R\$|%|\s/g, '');
+  if (s === '') return NaN;
+  return Number(s.includes(',') || /^-?\d{1,3}(\.\d{3})+$/.test(s) ? s.replace(/\./g, '').replace(',', '.') : s);
+};
+const txtNum = n => n == null ? '' : String(n).replace('.', ','); // para preencher campos
+const hoje = () => new Date().toLocaleDateString('sv-SE'); // AAAA-MM-DD no fuso local
+const mesTxt = ym => ym.split('-').reverse().join('/');         // '2026-03' → '03/2026'
+const mesCurto = ym => ym.slice(5) + '/' + ym.slice(2, 4);       // '2026-03' → '03/26'
+const mesNome = ym => { const n = new Date(ym + '-15T12:00').toLocaleDateString('pt-BR', { month: 'long' });
+  return n[0].toUpperCase() + n.slice(1) + '/' + ym.slice(0, 4); };                  // '2023-07' → 'Julho/2023'
+const proxMes = () => {
+  const u = db.meses.filter(temAporte).map(m => m.ym).sort().at(-1);
+  if (!u) return hoje().slice(0, 7);
+  const [a, m] = u.split('-').map(Number);
+  return m === 12 ? `${a + 1}-01` : `${a}-${String(m + 1).padStart(2, '0')}`;
+};
+const pctCor = v => v == null ? '—' : `<span class="${v > 0 ? 'up' : v < 0 ? 'dn' : ''}">${fmt(v)}%</span>`;
+const linha = (rot, val) => `<div><span class="mut">${rot}</span><span>${val}</span></div>`;
+// campos de número (inputmode="decimal"): só dígitos, vírgula, ponto e "-" no começo; letras somem ao digitar ou colar.
+// Roda antes dos outros "input" (fase de captura), então o saldo sugerido já usa o valor limpo.
+document.addEventListener('input', e => {
+  const el = e.target; if (el.inputMode !== 'decimal') return;
+  // campos da aba Aporte com máscara: os dígitos entram pela direita (como numa máquina de cartão).
+  // moeda: "R$ 1.234,56"; pct: "1,50" (com "-" em qualquer lugar fica negativo)
+  if (el.dataset.mask) {
+    const neg = el.dataset.mask === 'pct' && el.value.includes('-');
+    const n = Number(el.value.replace(/\D/g, '') || 0) / 100;
+    el.value = el.dataset.mask === 'moeda' ? brl(n) : (neg ? '-' : '') + fmt(n);
+    return;
+  }
+  const limpo = el.value.replace(/[^\d.,-]/g, '').replace(/(?!^)-/g, '');
+  if (limpo === el.value) return;
+  const pos = Math.max(0, el.selectionStart - (el.value.length - limpo.length));
+  el.value = limpo; el.setSelectionRange(pos, pos);
+}, true);
+document.addEventListener('focusin', e => { if (e.target.dataset?.mask) setTimeout(() => e.target.select(), 0); });
+
+// celular: abre a tela de compartilhar (OneDrive, Drive, WhatsApp...); no computador, baixa o arquivo.
+async function compartilhar(arq, titulo) {
+  const baixar = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(arq); a.download = arq.name; a.click(); };
+  try {
+    if (navigator.canShare?.({ files: [arq] })) await navigator.share({ files: [arq], title: titulo });
+    else baixar();
+    return true;
+  } catch (e) {
+    if (e.name === 'AbortError') return false; // a pessoa fechou a tela de compartilhar
+    baixar(); alert(`O celular não deixou compartilhar. O arquivo ${arq.name} foi salvo na pasta Downloads.`);
+    return true;
+  }
+}
+
+let L = []; // meses calculados, do mais antigo para o mais novo
+// Simulação: a conta real é a Super Conservador, então ela aparece só como "Real (Super Conservador)" (o campo de % continua no lançamento)
+const REAL = 'Real (Super Conservador)', MODS_SIM = MODS.filter(([k]) => k !== 'sc');
+let exportPos = null, exportAp = null; // linhas na tela (Resumido da Posição / tabela do Aporte) para Exportar para Excel
+const filtro = { de: null, ate: null };   // período da lista de meses da Posição (null = sem limite)
+const filtroAp = { de: null, ate: null }; // período da tabela da aba Aporte
+const filtroAc = { de: null, ate: null };  // período da tabela "Acumulado mês a mês"
+const filtroAno = { de: null, ate: null }; // anos da tabela "Por ano"
+let exportAc = null;                        // as 2 tabelas da Acumulada como estão na tela
+// Mês inicial / Mês final: vazio = do 1º ao último mês lançado; o início nunca fica antes do 1º mês lançado
+function periodo(f, idDe, idAte, idMsg) {
+  const primeiro = L[0]?.ym, ultimo = L.at(-1)?.ym;
+  const de = f.de && f.de > primeiro ? f.de : primeiro, ate = f.ate || ultimo;
+  [idDe, idAte].forEach(id => { $(id).min = primeiro || ''; $(id).max = ultimo || ''; });
+  $(idDe).value = de || ''; $(idAte).value = ate || '';
+  $(idMsg).textContent = de && ate && de > ate ? 'O mês inicial está depois do mês final.' : '';
+  return [de, ate];
+}
+function ligarFiltro(f, idDe, idAte, idMsg, idTodos) {
+  $(idDe).onchange = e => {
+    const v = e.target.value, min = e.target.min, antes = v && min && v < min;
+    f.de = v && !antes ? v : null; render();
+    if (antes) $(idMsg).textContent = `O mês inicial mínimo é ${mesNome(min)}.`; // o campo volta para o mínimo
+  };
+  // escolher o último mês lançado = "até o fim": acompanha os meses lançados depois
+  $(idAte).onchange = e => { const v = e.target.value; f.ate = v && v < e.target.max ? v : null; render(); };
+  $(idTodos).onclick = () => { f.de = f.ate = null; render(); };
+}
+
+function render() {
+  L = calcular(db.saldoInicial, db.meses);
+  const u = L.at(-1), novos = [...L].reverse();
+
+  // topo
+  $('hRef').textContent = u ? 'Ref. ' + mesTxt(u.ym) : '';
+  const iniTotal = PARTES.reduce((s, [p]) => s + (db.saldoInicial[p] || 0), 0);
+  $('hPos').textContent = brl(u ? u.saldo : iniTotal);
+  $('hPct').className = 'pill ' + cor(u?.acum ?? 0);
+  // o acumulado soma os % a partir do 1º mês lançado (o saldo do mês anterior a ele é só o ponto de partida)
+  const desde = L.length ? ' desde ' + mesNome(L[0].ym) : '';
+  $('hPct').innerHTML = ((u?.acum ?? 0) >= 0 ? `▲ ${pct(u?.acum ?? 0)}` : `▼ ${pct(u.acum)}`) + ' acumulado' + desde;
+  $('hMes').innerHTML = u ? 'Mês: ' + seta(u.rent) : '';
+  $('hApo').textContent = brl(L.reduce((s, l) => s + l.aporte, 0));
+  $('hLuc').innerHTML = dif(L.reduce((s, l) => s + l.lucro, 0));
+
+  // Posição: um cartão por parte, depois a lista de meses
+  $('pPartes').innerHTML = PARTES.map(([p, nome]) => {
+    const soma = c => L.reduce((s, l) => s + l.partes[p][c], 0);
+    return `<div class="card"><b>${nome}</b>
+      <div class="grid">${linha('Saldo', `<b>${brl(u ? u.partes[p].saldo : db.saldoInicial[p] || 0)}</b>`)}${linha(`Contribuições${desde}<button class="i" data-info="contrib" aria-label="Como são contadas as contribuições">i</button>`, brl(soma('aporte')))}${
+        linha(`Lucro${desde}<button class="i" data-info="lucroParte" aria-label="Como é calculado o lucro de cada parte">i</button>`, `<b>${dif(soma('lucro'))}</b>`)}${linha('Acumulado' + desde, seta(soma('rent')))}</div></div>`;
+  }).join('');
+  const reais = n => fmt(n); // valor sem "R$" (o título da coluna já diz R$)
+  const [pDe, pAte] = periodo(filtro, 'pDe', 'pAte', 'pFiltroMsg');
+  const lista = novos.filter(l => l.ym >= pDe && l.ym <= pAte);
+  // Aporte: contribuição, % e saldo digitados de cada parte, no período escolhido
+  const [aDe, aAte] = periodo(filtroAp, 'apDe', 'apAte', 'apMsg');
+  const listaAp = novos.filter(l => l.ym >= aDe && l.ym <= aAte);
+  exportAp = { de: aDe, ate: aAte, linhas: listaAp.map(l => [mesCurto(l.ym), ...PARTES.flatMap(([p]) => [l.partes[p].aporte, l.partes[p].taxa, l.partes[p].saldo])]) };
+  $('apExp').hidden = !listaAp.length;
+  $('lAp').innerHTML = !novos.length ? '<p class="mut">Nenhum mês lançado ainda.</p>'
+    : !listaAp.length ? '<p class="mut">Nenhum mês nesse período.</p>'
+    : `<div class="card rolagem"><table class="resumo dupla">
+      <tr><th rowspan="2">Mês</th>${PARTES.map(([, nome]) => `<th colspan="3" class="g">${nome}</th>`).join('')}</tr>
+      <tr>${PARTES.map(() => '<th class="g">Contrib. R$</th><th>% mês</th><th>Saldo R$</th>').join('')}</tr>${
+      listaAp.map(l => `<tr data-ym="${l.ym}"><td>${mesCurto(l.ym)}</td>${PARTES.map(([p]) => { const x = l.partes[p];
+        return `<td class="g">${reais(x.aporte)}</td><td>${x.taxa == null ? '—' : fmt(x.taxa)}</td><td><b>${reais(x.saldo)}</b></td>`; }).join('')}</tr>`).join('')}</table></div>`;
+  // Exportar para Excel: as mesmas linhas e colunas da tabela Resumido, só do período escolhido
+  // linha Soma do Resumido: só contribuições, lucro/juros e rentab./mês do período (soma simples, como na planilha)
+  const somaPer = c => lista.reduce((t, l) => t + l[c], 0);
+  const soma = { aporte: somaPer('aporte'), lucro: somaPer('lucro'), rent: somaPer('rent') };
+  exportPos = { de: pDe, ate: pAte, soma, linhas: lista.map(l => [mesCurto(l.ym), l.aporte, l.lucro, l.rent, l.saldo]) };
+  $('pExp').hidden = !($('pResumido').checked && lista.length);
+  $('lPos').innerHTML = !novos.length ? '<p class="mut">Nenhum mês lançado ainda. Lance o mês na aba Aporte.</p>'
+    : !lista.length ? '<p class="mut">Nenhum mês nesse período.</p>'
+    : $('pResumido').checked ? `<div class="card rolagem"><table class="resumo">
+      <tr><th>Mês</th><th>Contribuições R$</th><th>Lucro/Juros R$</th><th>Rentab./Mês</th><th>Valor total R$</th></tr>${
+      lista.map(l => `<tr data-ym="${l.ym}"><td>${mesCurto(l.ym)}</td><td>${reais(l.aporte)}</td><td class="${cor(l.lucro)}">${reais(l.lucro)}</td><td class="${cor(l.rent)}">${pct(l.rent)}</td><td><b>${reais(l.saldo)}</b></td></tr>`).join('')}
+      <tr class="soma"><td>Soma</td><td>${reais(soma.aporte)}</td><td class="${cor(soma.lucro)}">${reais(soma.lucro)}</td><td class="${cor(soma.rent)}">${pct(soma.rent)}</td><td></td></tr></table></div>`
+    : lista.map(l => `<div class="card" data-ym="${l.ym}">
+      <div class="row"><span class="tk">${mesTxt(l.ym)}</span><b>${brl(l.saldo)}</b></div>
+      <div class="grid">${linha('Contribuições', brl(l.aporte))}${linha('Lucro/Juros', dif(l.lucro))}${linha('Rentabilidade/Mês', seta(l.rent))}${
+        PARTES.map(([p, nome]) => { const x = l.partes[p];
+          return linha(nome, `${brl(x.saldo)}<br><span class="mut">contrib. ${brl(x.aporte)} · ${pctCor(x.taxa)}</span>`); }).join('')}</div>
+    </div>`).join('');
+
+  // Simulação
+  const real = u ? u.saldo : iniTotal;
+  $('sResumo').innerHTML = linha(`<b>${REAL}</b>`, `<b>${brl(real)}</b>`) +
+    MODS_SIM.map(([k, nome]) => { const v = u ? u.sim[k] : iniTotal, d = v - real, p = real ? d / real : 0;
+      return linha(nome, `${brl(v)}<br>${dif(d)} <span class="${cor(p)}">(${p >= 0 ? '+' : ''}${pct(p)})</span>`); }).join('');
+  if (!$('sMes').value) $('sMes').value = u?.ym || hoje().slice(0, 7);
+  carregarPct();
+  // mês com % lançado mas sem aporte: card com valores zerados até o aporte ser lançado (aí entra nas contas)
+  const pendentes = db.meses.filter(m => !temAporte(m)).map(m => ({ ...m, pendente: true }));
+  const cardsSim = [...novos, ...pendentes].sort((a, b) => b.ym.localeCompare(a.ym));
+  $('lSim').innerHTML = cardsSim.map(l => `<div class="card" data-ym="${l.ym}">
+      <div class="row"><span class="tk">${mesTxt(l.ym)}</span>${l.pendente ? '<span class="mut">aguardando aporte</span>' : ''}</div>
+      <div class="grid">${linha(`<b>${REAL}</b>`, `${pctCor(l.pendente ? 0 : l.rent * 100)} · <b>${brl(l.pendente ? 0 : l.saldo)}</b>`)}${MODS_SIM.map(([k, nome]) =>
+        linha(nome, `${pctCor(l.pendente ? 0 : l.pct?.[k])} · ${brl(l.pendente ? 0 : l.sim[k])}`)).join('')}</div>
+    </div>`).join('') || '<p class="mut">Nenhum mês ainda. Escolha o mês acima e lance os %.</p>';
+
+  // Acumulada
+  $('aSub').textContent = `(soma dos % mensais${desde})`; // desde = " desde <1º mês lançado>"
+  $('aResumo').innerHTML = linha('<b>Real</b>', seta(u?.acum ?? 0)) + MODS.map(([k, nome]) => linha(nome, seta(u?.acumSim[k] ?? 0))).join('');
+  // tabelas sem a coluna S.Con.: o Real já é a Super Conservador. Cada linha: [rótulo, real, ...modalidades] (em fração)
+  const titulos = ['Real (S. Conv*)', ...MODS_SIM.map(([, , ab]) => ab + '*')]; // "*" = está na legenda abaixo
+  const cab = primeira => `<tr><th>${primeira}</th>${titulos.map(t => `<th>${t}</th>`).join('')}</tr>`;
+  const cel = n => `<td class="${cor(n)}">${pct(n)}</td>`;
+  const tabela = (primeira, linhas, soma) => cab(primeira) + (linhas.length
+    ? linhas.map(([rot, ...v]) => `<tr><td>${rot}</td>${v.map(cel).join('')}</tr>`).join('') +
+      `<tr class="soma"><td>Soma</td>${soma.map(cel).join('')}</tr>`
+    : `<tr><td colspan="${titulos.length + 1}" class="mut">Nada nesse período.</td></tr>`);
+  const somar = linhas => titulos.map((_, i) => linhas.reduce((t, l) => t + l[i + 1], 0));
+  // Por ano: filtro de ano inicial/final (o mínimo é o 1º ano lançado)
+  const anos = porAno(L), lista_anos = anos.map(a => a.ano);
+  const opcoes = sel => lista_anos.map(a => `<option${a === sel ? ' selected' : ''}>${a}</option>`).join('');
+  const anoDe = filtroAno.de && lista_anos.includes(filtroAno.de) ? filtroAno.de : lista_anos[0];
+  const anoAte = filtroAno.ate && lista_anos.includes(filtroAno.ate) ? filtroAno.ate : lista_anos.at(-1);
+  $('anoDe').innerHTML = opcoes(anoDe); $('anoAte').innerHTML = opcoes(anoAte);
+  $('anoMsg').textContent = anoDe > anoAte ? 'O ano inicial está depois do ano final.' : '';
+  const linhasAno = anos.filter(a => a.ano >= anoDe && a.ano <= anoAte).reverse()
+    .map(a => [a.ano, a.real, ...MODS_SIM.map(([k]) => a.sim[k])]);
+  // mês a mês: acumulado desde o 1º mês; a Soma é a soma dos % mensais dos meses mostrados
+  const [acDe, acAte] = periodo(filtroAc, 'acDe', 'acAte', 'acMsg');
+  const doPeriodo = novos.filter(l => l.ym >= acDe && l.ym <= acAte);
+  const linhasMes = doPeriodo.map(l => [mesCurto(l.ym), l.acum, ...MODS_SIM.map(([k]) => l.acumSim[k])]);
+  const somaMes = somar(doPeriodo.map(l => [0, l.rent, ...MODS_SIM.map(([k]) => (l.pct?.[k] ?? 0) / 100)]));
+  const somaAno = somar(linhasAno);
+  $('aAno').innerHTML = tabela('Ano', linhasAno, somaAno);
+  $('aTab').innerHTML = tabela('Mês', linhasMes, somaMes);
+  exportAc = { titulos, linhasAno, somaAno, linhasMes, somaMes, nome: `${anoDe || ''}-a-${anoAte || ''}_${acDe || ''}-a-${acAte || ''}` };
+  $('acExp').hidden = !linhasAno.length && !linhasMes.length;
+
+  // Ajustes e lembrete de backup
+  PARTES.forEach(([p]) => { $('cIni_' + p).value = txtNum(db.saldoInicial[p] || 0); });
+  $('ultBackup').textContent = db.ultimoBackup ? `Último backup: ${db.ultimoBackup.split('-').reverse().join('/')}` : 'Nenhum backup feito ainda.';
+  const dias = db.ultimoBackup ? Math.floor((new Date(hoje()) - new Date(db.ultimoBackup)) / 864e5) : null;
+  $('lembrete').textContent = db.meses.length && (dias == null || dias >= 7)
+    ? `Faça um backup em Ajustes (${dias == null ? 'nenhum feito ainda' : 'último há ' + dias + ' dias'}).` : '';
+}
+
+// --- Posição: lançar / editar mês (contribuição, % do mês e saldo de cada parte) ---
+$('fPartes').innerHTML = PARTES.map(([p, nome]) => `<div class="parte"><b>${nome}</b>
+  <div class="two">
+    <div><label for="f_${p}_aporte">Contribuição do mês</label><input id="f_${p}_aporte" inputmode="decimal" data-mask="moeda" placeholder="R$ 0,00"></div>
+    <div><label for="f_${p}_taxa">% do mês</label>${p === 'part'
+      ? '<div class="comBotao"><input id="f_part_taxa" inputmode="decimal" data-mask="pct" placeholder="0,00"><button type="button" id="fReplicar" class="sec">Replicar</button></div>'
+      : `<input id="f_${p}_taxa" inputmode="decimal" data-mask="pct" placeholder="0,00">`}</div>
+  </div>
+  <label for="f_${p}_saldo">Saldo no fim do mês</label><input id="f_${p}_saldo" inputmode="decimal" data-mask="moeda" placeholder="R$ 0,00">
+  <div class="mut" id="f_${p}_ant"></div></div>`).join('');
+$('cIni').innerHTML = PARTES.map(([p, nome]) =>
+  `<div><label for="cIni_${p}">${nome}</label><input id="cIni_${p}" inputmode="decimal"></div>`).join('');
+const mesesOrd = () => db.meses.filter(temAporte).sort((a, b) => a.ym.localeCompare(b.ym));
+// saldo da parte no último mês antes de ym (ou o saldo inicial)
+const antDe = (p, ym) => { const a = mesesOrd().filter(m => m.ym < ym).at(-1); return a ? a[p]?.saldo ?? 0 : db.saldoInicial[p] || 0; };
+const mostraAnt = () => PARTES.forEach(([p]) => { $(`f_${p}_ant`).textContent = 'Saldo anterior: ' + brl(antDe(p, $('fMes').value)); });
+// recalcula o saldo sugerido quando muda a contribuição, o % ou o mês
+function preverSaldo(p) {
+  const ant = antDe(p, $('fMes').value), a = num($(`f_${p}_aporte`).value), t = num($(`f_${p}_taxa`).value);
+  mostraAnt();
+  if (isFinite(a) || isFinite(t)) $(`f_${p}_saldo`).value = brl(saldoPrevisto(ant, isFinite(t) ? t : 0, isFinite(a) ? a : 0));
+}
+PARTES.forEach(([p]) => ['aporte', 'taxa'].forEach(c => $(`f_${p}_${c}`).addEventListener('input', () => preverSaldo(p))));
+// Replicar: copia contribuição e % do Participante para a Cargill e recalcula o saldo da Cargill (como se fosse digitado)
+$('fReplicar').onclick = () => {
+  ['aporte', 'taxa'].forEach(c => { $(`f_cgl_${c}`).value = $(`f_part_${c}`).value; });
+  preverSaldo('cgl');
+};
+// trocar o mês: se já foi lançado, abre os valores registrados para editar; se não, campos zerados
+$('fMes').addEventListener('change', () => { if ($('fMes').value) { carregarMes($('fMes').value); $('fMsg').textContent = ''; } });
+
+let editando = null; // ym do mês aberto para edição
+// mês já lançado: valores registrados (modo edição, com Excluir); mês novo: contribuição 0, % 0,00 e saldo em branco
+function carregarMes(ym) {
+  const m = db.meses.find(x => x.ym === ym && temAporte(x));
+  editando = m ? ym : null;
+  $('fTit').textContent = m ? 'Editar ' + mesTxt(ym) : 'Lançar mês';
+  $('fMes').value = ym;
+  PARTES.forEach(([p]) => { const x = m?.[p];
+    $(`f_${p}_aporte`).value = brl(x?.aporte ?? 0);
+    $(`f_${p}_taxa`).value = x?.taxa == null ? (m ? '' : '0,00') : fmt(x.taxa);
+    $(`f_${p}_saldo`).value = x?.saldo == null ? '' : brl(x.saldo); });
+  mostraAnt();
+  $('fExcluir').hidden = !m;
+}
+function limparForm() { carregarMes(proxMes()); $('fMsg').textContent = ''; }
+// tocar num mês da Posição abre a aba Aporte com o mês para editar
+$('lPos').onclick = e => {
+  const ym = e.target.closest('[data-ym]')?.dataset.ym; if (!ym) return;
+  abrirAba('aporte');
+  carregarMes(ym); $('fMsg').textContent = '';
+};
+$('fSalvar').onclick = () => {
+  const ym = $('fMes').value, partes = {};
+  let erro = !/^\d{4}-\d{2}$/.test(ym) ? 'Escolha o mês.'
+    : ym !== editando && db.meses.some(m => m.ym === ym && temAporte(m)) ? `${mesTxt(ym)} já foi lançado: toque nele na lista para editar.` : '';
+  for (const [p, nome] of PARTES) {
+    if (erro) break;
+    const campo = c => $(`f_${p}_${c}`).value.trim();
+    const saldo = num(campo('saldo')), aporte = campo('aporte') ? num(campo('aporte')) : 0, taxa = campo('taxa') ? num(campo('taxa')) : null;
+    erro = !isFinite(saldo) || saldo < 0 ? `${nome}: saldo inválido.`
+      : !isFinite(aporte) ? `${nome}: contribuição inválida.`
+      : taxa != null && !isFinite(taxa) ? `${nome}: % inválido.` : '';
+    partes[p] = { saldo, aporte, taxa };
+  }
+  if (erro) { $('fMsg').className = 'msg dn'; $('fMsg').textContent = erro; return; }
+  // mantém os % da simulação (do mês editado ou já lançados na aba Simulação para este mês)
+  const antigo = db.meses.find(m => m.ym === (editando || ym));
+  db.meses = db.meses.filter(m => m.ym !== editando && m.ym !== ym);
+  db.meses.push({ ...antigo, ym, ...partes, pct: antigo?.pct || {} });
+  salvar(); render(); limparForm();
+  $('fMsg').textContent = ''; salvoOk();
+};
+$('fLimpar').onclick = limparForm;
+$('fExcluir').onclick = () => {
+  if (!confirm(`Excluir ${mesTxt(editando)}? Os % da simulação desse mês também serão apagados.`)) return;
+  db.meses = db.meses.filter(m => m.ym !== editando);
+  salvar(); render(); limparForm();
+};
+
+// --- Simulação: % do mês por modalidade ---
+$('sCampos').innerHTML = MODS.map(([k, nome]) =>
+  `<div><label for="s_${k}">${nome} %</label><input id="s_${k}" inputmode="decimal" data-mask="pct" placeholder="0,00"></div>`).join('');
+// mês já com % lançados: mostra os valores; mês novo: tudo 0,00
+function carregarPct() {
+  const m = db.meses.find(x => x.ym === $('sMes').value);
+  MODS.forEach(([k]) => { $('s_' + k).value = fmt(m?.pct?.[k] ?? 0); });
+}
+$('sMes').onchange = () => { if ($('sMes').value) carregarPct(); $('sMsg').textContent = ''; };
+$('lSim').onclick = e => {
+  const ym = e.target.closest('[data-ym]')?.dataset.ym; if (!ym) return;
+  $('sMes').value = ym; carregarPct(); $('sMsg').textContent = '';
+  $('sCard').scrollIntoView({ behavior: 'smooth', block: 'center' });
+};
+$('sLimpar').onclick = () => { MODS.forEach(([k]) => { $('s_' + k).value = '0,00'; }); $('sMsg').textContent = ''; };
+$('sSalvar').onclick = () => {
+  const ym = $('sMes').value, p = {};
+  const erro = msg => { $('sMsg').className = 'msg dn'; $('sMsg').textContent = msg; };
+  if (!/^\d{4}-\d{2}$/.test(ym)) return erro('Escolha o mês.');
+  for (const [k, nome] of MODS) {
+    const v = num($('s_' + k).value);
+    if (!isFinite(v) || v <= -100) return erro(`${nome}: valor inválido.`);
+    if (v === 0) return erro(`${nome}: o % não pode ser 0,00.`);
+    p[k] = v;
+  }
+  const m = db.meses.find(x => x.ym === ym);
+  if (m) m.pct = p; else db.meses.push({ ym, pct: p }); // mês ainda sem aporte: fica guardado só com os %
+  salvar(); render();
+  $('sMsg').textContent = ''; salvoOk();
+};
+
+// --- filtros de período: lista de meses da Posição e tabela da aba Aporte ---
+ligarFiltro(filtro, 'pDe', 'pAte', 'pFiltroMsg', 'pTodos');
+ligarFiltro(filtroAp, 'apDe', 'apAte', 'apMsg', 'apTodos');
+ligarFiltro(filtroAc, 'acDe', 'acAte', 'acMsg', 'acTodos');
+$('anoDe').onchange = e => { filtroAno.de = e.target.value; render(); };
+$('anoAte').onchange = e => { filtroAno.ate = e.target.selectedIndex === e.target.length - 1 ? null : e.target.value; render(); }; // último ano = acompanha os anos novos
+$('anoTodos').onclick = () => { filtroAno.de = filtroAno.ate = null; render(); };
+// tocar numa linha da tabela do Aporte abre o mês no quadro de digitação
+$('lAp').onclick = e => {
+  const ym = e.target.closest('[data-ym]')?.dataset.ym; if (!ym) return;
+  carregarMes(ym); $('fMsg').textContent = '';
+  $('fCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+// CSV no padrão do Excel em português: ";" separa colunas, vírgula decimal, sem separador de milhar (para virar número),
+// "﻿" no começo para os acentos. O mês vai como ="09/26" para o Excel não transformar em data.
+const nX = v => v == null ? '' : v.toLocaleString('pt-BR', { useGrouping: false, minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const exportarCSV = (linhas, arquivo, titulo) =>
+  compartilhar(new File(['\ufeff' + linhas.map(l => l.join(';')).join('\r\n')], arquivo, { type: 'text/csv' }), titulo);
+$('pExp').onclick = () => {
+  const { de, ate, linhas, soma } = exportPos;
+  exportarCSV([['Mês', 'Contribuições R$', 'Lucro/Juros R$', 'Rentab./Mês', 'Valor total R$'],
+    ...linhas.map(([mes, apo, luc, rent, saldo]) => [`="${mes}"`, nX(apo), nX(luc), nX(rent * 100) + '%', nX(saldo)]),
+    ['Soma', nX(soma.aporte), nX(soma.lucro), nX(soma.rent * 100) + '%', '']],
+    `prev-jr-meses-${de}-a-${ate}.csv`, 'Prev Jr - meses lançados');
+};
+// Aporte: cabeçalho em 2 linhas como na tela (Participante | Cargill em cima; colunas embaixo)
+$('apExp').onclick = () => {
+  const { de, ate, linhas } = exportAp;
+  exportarCSV([['', ...PARTES.flatMap(([, nome]) => [nome, '', ''])],
+    ['Mês', ...PARTES.flatMap(() => ['Contrib. R$', '% mês', 'Saldo R$'])],
+    ...linhas.map(([mes, ...v]) => [`="${mes}"`, ...v.map(nX)])],
+    `prev-jr-aportes-${de}-a-${ate}.csv`, 'Prev Jr - valores lançados');
+};
+
+// Acumulada: as 2 tabelas num arquivo só, como estão na tela (com os filtros e a linha Soma)
+// legenda das abreviações das tabelas da Acumulada (uma por linha)
+const LEGENDA = [['S. Conv', 'Super Conservador'], ...MODS_SIM.map(([, nome, ab]) => [ab, nome])].map(([ab, nome]) => `* ${ab} – ${nome}`);
+$('acLegenda').innerHTML = '<b>Legenda</b><br>' + LEGENDA.join('<br>');
+$('acExp').onclick = () => {
+  const { titulos, linhasAno, somaAno, linhasMes, somaMes, nome } = exportAc;
+  const p = v => nX(v * 100) + '%';
+  const bloco = (titulo, primeira, linhas, soma, txt) => [[titulo], [primeira, ...titulos],
+    ...linhas.map(([rot, ...v]) => [txt(rot), ...v.map(p)]), ['Soma', ...soma.map(p)]];
+  exportarCSV([...bloco('Por ano', 'Ano', linhasAno, somaAno, a => a), [],
+    ...bloco('Acumulado mês a mês', 'Mês', linhasMes, somaMes, m => `="${m}"`), [], ['Legenda'], ...LEGENDA.map(l => [l])],
+    `prev-jr-acumulada_${nome}.csv`, 'Prev Jr - rentabilidade acumulada');
+};
+
+// --- Posição: caixa "Resumido" (lembrada neste celular) ---
+try { $('pResumido').checked = localStorage.getItem('prev-jr-resumido') === '1'; } catch {}
+$('pResumido').onchange = e => { try { localStorage.setItem('prev-jr-resumido', e.target.checked ? '1' : ''); } catch {} render(); };
+
+// --- explicações (botões "i" do topo), com os números atuais ---
+document.addEventListener('click', e => {
+  const qual = e.target.closest('[data-info]')?.dataset.info; if (!qual) return;
+  const u = L.at(-1), ini = PARTES.reduce((s, [p]) => s + (db.saldoInicial[p] || 0), 0);
+  const de = L.length ? mesNome(L[0].ym) : '—', n = L.length;
+  const mesAnt = ym => { const [a, m] = ym.split('-').map(Number); return m === 1 ? `${a - 1}-12` : `${a}-${String(m - 1).padStart(2, '0')}`; };
+  const antDoInicio = L.length ? mesNome(mesAnt(L[0].ym)) : 'o mês anterior';
+  const apo = L.reduce((s, l) => s + l.aporte, 0), luc = L.reduce((s, l) => s + l.lucro, 0);
+  const composto = L.reduce((f, l) => f * (1 + l.rent), 1) - 1;
+  const tr = (a, b, neg) => `<tr><td>${a}</td><td>${neg ? '− ' : ''}${b}</td></tr>`;
+  const porParte = c => PARTES.map(([p, nome]) => tr(nome, brl(L.reduce((s, l) => s + l.partes[p][c], 0)))).join('');
+  // conta do lucro de uma parte: saldo atual − saldo de partida − contribuições
+  const contaParte = (p, nome) => {
+    const somaP = c => L.reduce((s, l) => s + l.partes[p][c], 0), ini_p = db.saldoInicial[p] || 0;
+    return `<p style="margin-bottom:2px"><b>${nome}</b></p><table>${tr('Saldo atual', brl(u?.partes[p].saldo ?? ini_p))}${
+      tr(`Saldo de partida (${antDoInicio})`, brl(ini_p), 1)}${tr(`Contribuições de ${de} até hoje`, brl(somaP('aporte')), 1)}<tr><td><b>= Lucro</b></td><td><b>${brl(somaP('lucro'))}</b></td></tr></table>`;
+  };
+  $('infoTxt').innerHTML = qual === 'lucroParte' ? `<h3>Lucro desde ${de}</h3>
+    <p>É a soma do lucro de cada mês da parte, de <b>${de}</b> <b>até hoje</b>. Lucro do mês = saldo do mês − saldo do mês anterior − contribuição do mês.</p>
+    ${PARTES.map(([p, nome]) => contaParte(p, nome)).join('')}
+    <p>Somando as duas partes: <b>${brl(luc)}</b> (o Lucro Acumulado Total do topo).</p>
+    <p class="mut">O saldo de partida de cada parte em ${antDoInicio} é estimado (a planilha só dá o total exato). Isso só muda como o lucro de ${de} se divide entre as partes; o total não muda. Dá para corrigir em Ajustes → Saldo inicial.</p>`
+  : qual === 'contrib' || qual === 'aportado' ? `<h3>${qual === 'aportado' ? 'Total aportado' : 'Contribuições desde ' + de}</h3>
+    <p>É a soma das contribuições de todos os meses, de <b>${de}</b> <b>até hoje</b> (${n} meses).</p>
+    <table>${porParte('aporte')}<tr><td><b>Total${qual === 'aportado' ? '' : ' (topo: Total aportado)'}</b></td><td><b>${brl(apo)}</b></td></tr></table>
+    <p>As contribuições feitas antes de ${de} não aparecem separadas: já estão dentro do saldo de partida de <b>${antDoInicio}</b> (${brl(ini)}).</p>
+    ${u ? `<p>Contribuição do último mês: ${PARTES.map(([p, nome]) => `${nome} <b>${brl(u.partes[p].aporte)}</b>`).join(' · ')}.</p>` : ''}`
+  : qual === 'acum' ? `<h3>Acumulado desde ${de}</h3>
+    <p>É a <b>soma simples</b> da rentabilidade de cada mês, de <b>${de}</b> <b>até hoje</b> (${n} meses), do mesmo jeito da planilha ("Acumulado Desde Julho/23").</p>
+    <p>Rentabilidade do mês = lucro do mês ÷ saldo do mês anterior.${L.length ? ` O primeiro mês somado é ${de}: ${pct(L[0].rent)}.` : ''}</p>
+    <p>O saldo de <b>${antDoInicio}</b> (${brl(ini)}) é só o ponto de partida: nenhum % desse mês entra na soma.</p>
+    <p>Total: <b>${pct(u?.acum ?? 0)}</b>. Por ser soma simples, fica um pouco abaixo do ganho com juros sobre juros, que seria <b>${pct(composto)}</b>.</p>`
+  : `<h3>Lucro Acumulado Total</h3>
+    <p>É a soma do lucro de todos os meses, de <b>${de}</b> <b>até hoje</b>. Lucro do mês = saldo do mês − saldo do mês anterior − contribuições do mês.</p>
+    <p>Somando tudo, é o mesmo que:</p>
+    <table>${tr('Saldo atual', brl(u?.saldo ?? ini))}${tr(`Saldo de partida (${antDoInicio})`, brl(ini), 1)}${
+      tr(`Contribuições de ${de} até hoje`, brl(apo), 1)}<tr><td><b>= Lucro Acumulado Total</b></td><td><b>${brl(luc)}</b></td></tr></table>
+    <p>Ou seja: tudo o que a conta cresceu sem contar o que foi depositado.</p>
+    <p>Por parte: ${PARTES.map(([p, nome]) => `${nome} <b>${brl(L.reduce((s, l) => s + l.partes[p].lucro, 0))}</b>`).join(' · ')}.</p>`;
+  $('info').showModal();
+});
+$('infoOk').onclick = () => $('info').close();
+// confirmação depois de salvar (Aporte, Simulação e saldo inicial); usa a mesma caixa das explicações
+function salvoOk() {
+  $('infoTxt').innerHTML = '<h3 style="text-align:center; margin:8px 0"><span class="up">✓</span> Dados Salvos com Sucesso</h3>';
+  $('info').showModal();
+}
+$('info').onclick = e => { if (e.target === $('info')) $('info').close(); }; // toque fora da caixa fecha
+
+// --- menu ---
+function abrirAba(t) {
+  document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x.dataset.tab === t));
+  document.querySelectorAll('main section').forEach(s => s.hidden = s.id !== 'tab-' + t);
+  scrollTo(0, 0);
+}
+document.querySelector('nav').onclick = e => {
+  const t = e.target.closest('button')?.dataset.tab; if (t) abrirAba(t); // toque pode cair no ícone
+};
+
+// --- Ajustes ---
+$('cSalvarIni').onclick = () => {
+  const v = Object.fromEntries(PARTES.map(([p]) => [p, num($('cIni_' + p).value || '0')]));
+  if (!Object.values(v).every(x => isFinite(x) && x >= 0)) { $('cIniMsg').className = 'msg dn'; $('cIniMsg').textContent = 'Valor inválido.'; return; }
+  db.saldoInicial = v; salvar(); render(); mostraAnt();
+  $('cIniMsg').textContent = ''; salvoOk();
+};
+try { $('cTema').value = localStorage.getItem('prev-jr-tema') || 'auto'; } catch {}
+$('cTema').onchange = e => { localStorage.setItem('prev-jr-tema', e.target.value); aplicarTema(); };
+$('btnExp').onclick = async () => {
+  // .txt: o Chrome do Android recusa compartilhar .json; o conteúdo continua sendo JSON
+  const arq = new File([JSON.stringify(db, null, 1)], `backup-prev-jr-${hoje()}.txt`, { type: 'text/plain' });
+  if (!await compartilhar(arq, 'Backup Prev Jr')) return;
+  db.ultimoBackup = hoje(); salvar(); render();
+};
+$('btnImp').onclick = () => $('fileImp').click();
+$('fileImp').onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try {
+    const d = JSON.parse(await f.text());
+    const parteOk = x => x == null || (isFinite(x.saldo) && isFinite(x.aporte) && (x.taxa == null || isFinite(x.taxa)));
+    const ok = PARTES.every(([p]) => isFinite(d.saldoInicial?.[p])) && Array.isArray(d.meses) && d.meses.every(m =>
+      /^\d{4}-\d{2}$/.test(m.ym) && PARTES.every(([p]) => parteOk(m[p])) && Object.values(m.pct || {}).every(isFinite));
+    if (!ok) throw new Error('arquivo não parece um backup deste app');
+    if (db.meses.length && !confirm('Isso substitui todos os dados atuais deste celular. Continuar?')) return;
+    db = { ...vazio, ...d };
+    salvar(); render(); limparForm();
+    $('cMsg').className = 'msg up'; $('cMsg').textContent = `Importados ${d.meses.length} meses.`;
+  } catch (err) { $('cMsg').className = 'msg dn'; $('cMsg').textContent = 'Erro ao importar: ' + err.message; }
+  e.target.value = '';
+};
+
+// --- Senha do app (igual à Carteira BDR; guardada à parte: não entra no backup) ---
+// shortcut: é uma trava de tela; os dados no celular não ficam criptografados. Para isso, cifrar o db com a senha.
+const KEY_SENHA = 'prev-jr-senha';
+let trava; try { trava = JSON.parse(localStorage.getItem(KEY_SENHA)) || {}; } catch { trava = {}; }
+const salvarTrava = () => localStorage.setItem(KEY_SENHA, JSON.stringify(trava));
+const temSenha = () => !!trava.senha;
+const novaRuim = (a, b) => a.length < 4 ? 'A senha precisa ter pelo menos 4 caracteres.' : a !== b ? 'As duas senhas não são iguais.' : '';
+let bioDisponivel = false;
+
+// "Mostrar senha": vale para os campos de senha do mesmo bloco
+document.addEventListener('change', e => {
+  if (!e.target.classList.contains('verSenha')) return;
+  e.target.closest('#tEntrar, #tRecuperar, .card').querySelectorAll('input[type=password], input[data-senha]')
+    .forEach(i => { i.dataset.senha = 1; i.type = e.target.checked ? 'text' : 'password'; });
+});
+
+function renderSenha() {
+  $('sStatus').textContent = temSenha() ? 'O app pede senha ao abrir.' : 'Sem senha: o app abre direto.';
+  $('sAtualBox').hidden = $('sRemover').hidden = !temSenha();
+  $('sSalvarSenha').textContent = temSenha() ? 'Trocar senha' : 'Criar senha';
+  $('sBioBox').hidden = !temSenha() || !bioDisponivel;
+  $('sBio').checked = !!trava.bio;
+}
+const msgSenha = (txt, ok) => { $('sSenhaMsg').className = 'msg ' + (ok ? 'up' : 'dn'); $('sSenhaMsg').textContent = txt; };
+const limpaCampos = (...ids) => ids.forEach(id => $(id).value = '');
+
+$('sSalvarSenha').onclick = async () => {
+  if (temSenha() && !await confereSenha($('sAtual').value, trava.senha)) return msgSenha('Senha atual errada.');
+  const erro = novaRuim($('sNova').value, $('sConf').value); if (erro) return msgSenha(erro);
+  const criando = !temSenha();
+  trava.senha = await protegerSenha($('sNova').value);
+  if (!trava.codigo) { // código de recuperação: gerado uma vez e mostrado só agora
+    const c = gerarCodigo(); trava.codigo = await protegerSenha(limpaCodigo(c));
+    $('sCodigo').textContent = c; $('sCodigoBox').hidden = false;
+  }
+  salvarTrava(); limpaCampos('sAtual', 'sNova', 'sConf'); renderSenha();
+  msgSenha(criando ? 'Senha criada.' : 'Senha trocada.', true);
+};
+$('sCodigoOk').onclick = () => { $('sCodigoBox').hidden = true; $('sCodigo').textContent = ''; };
+$('sRemover').onclick = async () => {
+  if (!await confereSenha($('sAtual').value, trava.senha)) return msgSenha('Digite a senha atual para remover.');
+  if (!confirm('Remover a senha? O app vai abrir sem pedir senha.')) return;
+  trava = {}; salvarTrava(); limpaCampos('sAtual', 'sNova', 'sConf'); renderSenha(); msgSenha('Senha removida.', true);
+};
+// Digital/rosto (WebAuthn): o celular confirma a pessoa; o app só guarda o identificador da credencial.
+// shortcut: não verifica a assinatura num servidor (não há servidor); serve como trava local, igual à senha.
+$('sBio').onchange = async e => {
+  if (!e.target.checked) { delete trava.bio; salvarTrava(); return msgSenha('Entrada com digital desligada.', true); }
+  try {
+    const cred = await navigator.credentials.create({ publicKey: {
+      challenge: aleatorio(32), rp: { name: 'Prev Jr' },
+      user: { id: aleatorio(16), name: 'prev-jr', displayName: 'Prev Jr' },
+      pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+      authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'discouraged' },
+      timeout: 60000 } });
+    trava.bio = b64(new Uint8Array(cred.rawId)); salvarTrava(); msgSenha('Pronto: ao abrir, o app pede a digital.', true);
+  } catch (err) { e.target.checked = false; msgSenha('Não foi possível ligar a digital: ' + err.message); }
+};
+
+// Tela de bloqueio
+const msgTrava = t => $('tMsg').textContent = t;
+function modoRecuperar(sim) { $('tEntrar').hidden = sim; $('tRecuperar').hidden = !sim; msgTrava(''); }
+async function entrarBio() {
+  try {
+    await navigator.credentials.get({ publicKey: { challenge: aleatorio(32), userVerification: 'required', timeout: 60000,
+      allowCredentials: [{ type: 'public-key', id: deB64(trava.bio) }] } });
+    liberar();
+  } catch { msgTrava('Digital não confirmada. Use a senha.'); }
+}
+function bloquear() {
+  $('trava').hidden = false; modoRecuperar(false); limpaCampos('tSenha', 'tCodigo', 'tNova', 'tConf');
+  $('tBio').hidden = !trava.bio;
+  if (trava.bio) entrarBio(); else $('tSenha').focus();
+}
+function liberar() { $('trava').hidden = true; limpaCampos('tSenha', 'tCodigo', 'tNova', 'tConf'); msgTrava(''); }
+$('tBio').onclick = entrarBio;
+$('tEsqueci').onclick = () => modoRecuperar(true);
+$('tVoltar').onclick = () => modoRecuperar(false);
+$('tForm').onsubmit = async e => {
+  e.preventDefault();
+  if ($('tRecuperar').hidden) return await confereSenha($('tSenha').value, trava.senha) ? liberar() : msgTrava('Senha errada.');
+  if (!await confereSenha(limpaCodigo($('tCodigo').value), trava.codigo)) return msgTrava('Código de recuperação errado.');
+  const erro = novaRuim($('tNova').value, $('tConf').value); if (erro) return msgTrava(erro);
+  trava.senha = await protegerSenha($('tNova').value); salvarTrava(); liberar(); alert('Senha nova criada.');
+};
+// voltou ao app depois de mais de 1 minuto em segundo plano: pede a senha de novo
+let saiu = 0;
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) saiu = Date.now();
+  else if (temSenha() && $('trava').hidden && Date.now() - saiu > 60000) bloquear();
+});
+if (temSenha()) bloquear();
+renderSenha();
+window.PublicKeyCredential?.isUserVerifyingPlatformAuthenticatorAvailable?.()
+  .then(ok => { bioDisponivel = ok; renderSenha(); }).catch(() => {});
+
+render();
+limparForm();
+</script>
+</body>
+</html>
