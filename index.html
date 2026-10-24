@@ -221,8 +221,8 @@ dialog table td:first-child { white-space:normal; }
   <!-- Rentabilidade acumulada -->
   <section id="tab-acum" hidden>
     <div class="card">
-      <b>Rentabilidade acumulada</b> <span class="mut" id="aSub">(soma dos % mensais)</span>
-      <label class="check" style="margin:8px 0 0"><input type="checkbox" id="aRanking"> Ordenar por ranking (maior rentabilidade primeiro)</label>
+      <b>Rentabilidade Acumulada</b><button class="i" data-info="acumModos" aria-label="Como é calculada a rentabilidade acumulada">i</button>
+      <label class="check" style="margin:8px 0 0"><input type="checkbox" id="aRanking"> Ordenar por Ranking</label>
       <div class="grid" id="aResumo"></div>
     </div>
     <!-- cada tabela num quadro, com os filtros na mesma linha do Todos -->
@@ -294,7 +294,7 @@ dialog table td:first-child { white-space:normal; }
       <div class="msg" id="cMsg"></div>
     </div>
     <!-- versão: MAIOR.MÉDIO.MENOR (ver CLAUDE.md); atualizar a cada publicação -->
-    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Prev Jr · versão 1.4.2 · 24/10/2026</p>
+    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Prev Jr · versão 1.4.3 · 24/10/2026</p>
   </section>
 </main>
 
@@ -333,7 +333,7 @@ dialog table td:first-child { white-space:normal; }
 </nav>
 
 <!-- "?v=" = versão do app: o celular baixa o calc.js novo junto com a tela nova (sem misturar com a cópia antiga do cache) -->
-<script src="calc.js?v=1.4.2"></script>
+<script src="calc.js?v=1.4.3"></script>
 <script>
 const KEY = 'prev-jr';
 const vazio = { saldoInicial: { part: 0, cgl: 0 }, meses: [], ultimoBackup: null };
@@ -517,7 +517,6 @@ function render() {
     </div>`).join('') || '<p class="mut">Nenhum mês ainda. Escolha o mês acima e lance os %.</p>';
 
   // Acumulada
-  $('aSub').textContent = `(soma dos % mensais${desde})`; // desde = " desde <1º mês lançado>"
   // Real = Super Conservador (a modalidade não se repete); com "ranking" marcado: do maior para o menor, numerado
   let itens = [[`<b>${REAL}</b>`, u?.acum ?? 0], ...MODS_SIM.map(([k, nome]) => [nome, u?.acumSim[k] ?? 0])];
   if ($('aRanking').checked) itens = itens.sort((a, b) => b[1] - a[1]).map(([rot, v], i) => [`${i + 1}. ${rot}`, v]);
@@ -757,6 +756,11 @@ document.addEventListener('click', e => {
     <table>${porParte('aporte')}<tr><td><b>Total${qual === 'aportado' ? '' : ' (topo: Total aportado)'}</b></td><td><b>${brl(apo)}</b></td></tr></table>
     <p>As contribuições feitas antes de ${de} não aparecem separadas: já estão dentro do saldo de partida de <b>${antDoInicio}</b> (${brl(ini)}).</p>
     ${u ? `<p>Contribuição do último mês: ${PARTES.map(([p, nome]) => `${nome} <b>${brl(u.partes[p].aporte)}</b>`).join(' · ')}.</p>` : ''}`
+  : qual === 'acumModos' ? `<h3>Rentabilidade Acumulada</h3>
+    <p>É a <b>soma dos % mensais desde ${de}</b> até hoje (${n} meses), do mesmo jeito da planilha ("Acumulado Desde Julho/23").</p>
+    <p><b>${REAL}</b>: a soma da rentabilidade real de cada mês (lucro do mês ÷ saldo do mês anterior). A sua conta é a Super Conservador, por isso ela não aparece de novo na lista.</p>
+    <p><b>Conservador, Moderado, Arrojado e Super Arrojado</b>: a soma dos % de cada mês lançados na aba Simulação.</p>
+    <p><b>Ordenar por Ranking</b>: coloca da maior para a menor rentabilidade, numerando 1, 2, 3…</p>`
   : qual === 'acum' ? `<h3>Acumulado desde ${de}</h3>
     <p>É a <b>soma simples</b> da rentabilidade de cada mês, de <b>${de}</b> <b>até hoje</b> (${n} meses), do mesmo jeito da planilha ("Acumulado Desde Julho/23").</p>
     <p>Rentabilidade do mês = lucro do mês ÷ saldo do mês anterior.${L.length ? ` O primeiro mês somado é ${de}: ${pct(L[0].rent)}.` : ''}</p>
