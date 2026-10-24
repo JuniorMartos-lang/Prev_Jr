@@ -294,7 +294,7 @@ dialog table td:first-child { white-space:normal; }
       <div class="msg" id="cMsg"></div>
     </div>
     <!-- versão: MAIOR.MÉDIO.MENOR (ver CLAUDE.md); atualizar a cada publicação -->
-    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Prev Jr · versão 1.4.1 · 24/10/2026</p>
+    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Prev Jr · versão 1.4.2 · 24/10/2026</p>
   </section>
 </main>
 
@@ -333,7 +333,7 @@ dialog table td:first-child { white-space:normal; }
 </nav>
 
 <!-- "?v=" = versão do app: o celular baixa o calc.js novo junto com a tela nova (sem misturar com a cópia antiga do cache) -->
-<script src="calc.js?v=1.4.1"></script>
+<script src="calc.js?v=1.4.2"></script>
 <script>
 const KEY = 'prev-jr';
 const vazio = { saldoInicial: { part: 0, cgl: 0 }, meses: [], ultimoBackup: null };
@@ -552,7 +552,9 @@ function render() {
   $('acExp').hidden = !linhasAno.length && !linhasMes.length;
 
   // Ajustes e lembrete de backup
-  PARTES.forEach(([p]) => { $('cIni_' + p).value = txtNum(db.saldoInicial[p] || 0); });
+  // saldo inicial segue o olho do topo: com valor e olho fechado, mostra "R$ *****" e não deixa editar
+  PARTES.forEach(([p]) => { const v = db.saldoInicial[p] || 0, el = $('cIni_' + p);
+    el.readOnly = !!(ocultar && v); el.value = el.readOnly ? OCULTO : txtNum(v); });
   $('ultBackup').textContent = db.ultimoBackup ? `Último backup: ${db.ultimoBackup.split('-').reverse().join('/')}` : 'Nenhum backup feito ainda.';
   const dias = db.ultimoBackup ? Math.floor((new Date(hoje()) - new Date(db.ultimoBackup)) / 864e5) : null;
   $('lembrete').textContent = db.meses.length && (dias == null || dias >= 7)
@@ -718,7 +720,7 @@ $('acExp').onclick = () => {
     `prev-jr-acumulada_${nome}.csv`, 'Prev Jr - rentabilidade acumulada');
 };
 
-$('hOlho').onclick = () => { ocultar = !ocultar; render(); };
+$('hOlho').onclick = () => { ocultar = !ocultar; $('cIniMsg').textContent = ''; render(); };
 
 // --- Posição: caixa "Resumido" (lembrada neste celular) ---
 try { $('pResumido').checked = localStorage.getItem('prev-jr-resumido') === '1'; } catch {}
@@ -789,6 +791,7 @@ document.querySelector('nav').onclick = e => {
 
 // --- Ajustes ---
 $('cSalvarIni').onclick = () => {
+  if (PARTES.some(([p]) => $('cIni_' + p).readOnly)) { $('cIniMsg').className = 'msg dn'; $('cIniMsg').textContent = 'Os valores estão escondidos: toque no olho do topo para ver e editar.'; return; }
   const v = Object.fromEntries(PARTES.map(([p]) => [p, num($('cIni_' + p).value || '0')]));
   if (!Object.values(v).every(x => isFinite(x) && x >= 0)) { $('cIniMsg').className = 'msg dn'; $('cIniMsg').textContent = 'Valor inválido.'; return; }
   db.saldoInicial = v; salvar(); render(); mostraAnt();
