@@ -205,7 +205,8 @@ dialog table td:first-child { white-space:normal; }
   <!-- Simulação: % de cada modalidade mês a mês -->
   <section id="tab-simul" hidden>
     <div class="card">
-      <b>Se tivesse escolhido…</b>
+      <div class="row" style="align-items:center"><b>Se tivesse escolhido…</b>
+        <button id="sOlho" class="olho" aria-label="Mostrar valores"></button></div>
       <div class="grid" id="sResumo"></div>
     </div>
     <div class="card" id="sCard">
@@ -215,7 +216,8 @@ dialog table td:first-child { white-space:normal; }
       <div class="two" style="margin-top:12px"><button id="sSalvar">Salvar</button><button id="sLimpar" class="sec">Limpar</button></div>
       <div class="msg" id="sMsg"></div>
     </div>
-    <h2>Mês a mês <span class="mut">(% do mês · saldo projetado)</span></h2>
+    <h2 class="row" style="align-items:center"><span>Mês a mês <span class="mut">(% do mês · saldo projetado)</span></span>
+      <button id="smOlho" class="olho" aria-label="Mostrar valores"></button></h2>
     <div id="lSim" class="lista"></div>
   </section>
 
@@ -295,7 +297,7 @@ dialog table td:first-child { white-space:normal; }
       <div class="msg" id="cMsg"></div>
     </div>
     <!-- versão: MAIOR.MÉDIO.MENOR (ver CLAUDE.md); atualizar a cada publicação -->
-    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Prev Jr · versão 1.3.0 · 24/10/2026</p>
+    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Prev Jr · versão 1.4.0 · 24/10/2026</p>
   </section>
 </main>
 
@@ -334,7 +336,7 @@ dialog table td:first-child { white-space:normal; }
 </nav>
 
 <!-- "?v=" = versão do app: o celular baixa o calc.js novo junto com a tela nova (sem misturar com a cópia antiga do cache) -->
-<script src="calc.js?v=1.3.0"></script>
+<script src="calc.js?v=1.4.0"></script>
 <script>
 const KEY = 'prev-jr';
 const vazio = { saldoInicial: { part: 0, cgl: 0 }, meses: [], ultimoBackup: null };
@@ -410,6 +412,8 @@ const OCULTO = 'R$ *****';
 const esconde = txt => ocultar ? OCULTO : txt;
 // olho separado da lista "Meses lançados": esconde só o valor total do mês (e o saldo de cada parte nos cards)
 let ocultarMeses = true;
+// Simulação: olho do "Se tivesse escolhido…" (sim) e do "Mês a mês" (simMes); mesmas regras (começam escondidos)
+const olhos = { sim: true, simMes: true };
 const escondeM = (txt, oculto = OCULTO) => ocultarMeses ? oculto : txt;
 const brlVisivel = n => brl(n);
 const OLHO_ABERTO = '<svg viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>';
@@ -453,6 +457,8 @@ function render() {
   $('hOlho').innerHTML = ocultar ? OLHO_FECHADO : OLHO_ABERTO;
   $('mOlho').innerHTML = ocultarMeses ? OLHO_FECHADO : OLHO_ABERTO;
   $('mOlho').setAttribute('aria-label', ocultarMeses ? 'Mostrar valores' : 'Esconder valores');
+  [['sOlho', 'sim'], ['smOlho', 'simMes']].forEach(([id, k]) => {
+    $(id).innerHTML = olhos[k] ? OLHO_FECHADO : OLHO_ABERTO; $(id).setAttribute('aria-label', olhos[k] ? 'Mostrar valores' : 'Esconder valores'); });
   $('hOlho').setAttribute('aria-label', ocultar ? 'Mostrar valores' : 'Esconder valores');
   $('hPct').className = 'pill ' + cor(u?.acum ?? 0);
   // o acumulado soma os % a partir do 1º mês lançado (o saldo do mês anterior a ele é só o ponto de partida)
@@ -505,9 +511,9 @@ function render() {
 
   // Simulação
   const real = u ? u.saldo : iniTotal;
-  $('sResumo').innerHTML = linha(`<b>${REAL}</b>`, `<b>${brl(real)}</b>`) +
+  $('sResumo').innerHTML = linha(`<b>${REAL}</b>`, `<b>${olhos.sim ? OCULTO : brl(real)}</b>`) +
     MODS_SIM.map(([k, nome]) => { const v = u ? u.sim[k] : iniTotal, d = v - real, p = real ? d / real : 0;
-      return linha(nome, `${brl(v)}<br>${dif(d)} <span class="${cor(p)}">(${p >= 0 ? '+' : ''}${pct(p)})</span>`); }).join('');
+      return linha(nome, `${olhos.sim ? OCULTO : brl(v)}<br>${dif(d)} <span class="${cor(p)}">(${p >= 0 ? '+' : ''}${pct(p)})</span>`); }).join('');
   if (!$('sMes').value) $('sMes').value = u?.ym || hoje().slice(0, 7);
   carregarPct();
   // mês com % lançado mas sem aporte: card com valores zerados até o aporte ser lançado (aí entra nas contas)
@@ -515,8 +521,8 @@ function render() {
   const cardsSim = [...novos, ...pendentes].sort((a, b) => b.ym.localeCompare(a.ym));
   $('lSim').innerHTML = cardsSim.map(l => `<div class="card" data-ym="${l.ym}">
       <div class="row"><span class="tk">${mesTxt(l.ym)}</span>${l.pendente ? '<span class="mut">aguardando aporte</span>' : ''}</div>
-      <div class="grid">${linha(`<b>${REAL}</b>`, `${pctCor(l.pendente ? 0 : l.rent * 100)} · <b>${brl(l.pendente ? 0 : l.saldo)}</b>`)}${MODS_SIM.map(([k, nome]) =>
-        linha(nome, `${pctCor(l.pendente ? 0 : l.pct?.[k])} · ${brl(l.pendente ? 0 : l.sim[k])}`)).join('')}</div>
+      <div class="grid">${linha(`<b>${REAL}</b>`, `${pctCor(l.pendente ? 0 : l.rent * 100)} · <b>${olhos.simMes ? OCULTO : brl(l.pendente ? 0 : l.saldo)}</b>`)}${MODS_SIM.map(([k, nome]) =>
+        linha(nome, `${pctCor(l.pendente ? 0 : l.pct?.[k])} · ${olhos.simMes ? OCULTO : brl(l.pendente ? 0 : l.sim[k])}`)).join('')}</div>
     </div>`).join('') || '<p class="mut">Nenhum mês ainda. Escolha o mês acima e lance os %.</p>';
 
   // Acumulada
@@ -723,6 +729,8 @@ $('acExp').onclick = () => {
 
 $('hOlho').onclick = () => { ocultar = !ocultar; render(); };
 $('mOlho').onclick = () => { ocultarMeses = !ocultarMeses; render(); };
+$('sOlho').onclick = () => { olhos.sim = !olhos.sim; render(); };
+$('smOlho').onclick = () => { olhos.simMes = !olhos.simMes; render(); };
 
 // --- Posição: caixa "Resumido" (lembrada neste celular) ---
 try { $('pResumido').checked = localStorage.getItem('prev-jr-resumido') === '1'; } catch {}
