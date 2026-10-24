@@ -33,6 +33,9 @@ header b { font-size:14px; line-height:1.25; } /* nome longo: quebra em 2 linhas
 #hRef { font-size:12px; }
 #topo { max-width:640px; margin:-34px auto 0; padding:0 16px; }
 .posCard { padding:12px 14px; margin-bottom:0; }
+/* olho: mostra/esconde os valores em R$ do topo e dos cartões Participante/Cargill */
+button.olho { background:none; color:var(--pri); padding:2px 4px; border-radius:6px; line-height:0; }
+button.olho svg { width:22px; height:22px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
 #hPos { font-size:28px; font-weight:600; margin:2px 0 4px; font-variant-numeric:tabular-nums; }
 .posCard .row { align-items:center; }
 .posCard b { font-weight:600; font-variant-numeric:tabular-nums; }
@@ -147,7 +150,8 @@ dialog table td:first-child { white-space:normal; }
 </header>
 <div id="topo">
   <div class="card posCard">
-    <div class="mut">Posição atual</div>
+    <div class="row" style="align-items:center"><span class="mut">Posição atual</span>
+      <button id="hOlho" class="olho" aria-label="Mostrar valores"></button></div>
     <div id="hPos">—</div>
     <div class="row"><span><span id="hPct" class="pill"></span><button class="i" data-info="acum" aria-label="Como é calculado o acumulado">i</button></span><span id="hMes"></span></div>
     <div class="row divide"><span><span class="mut">Total aportado</span><button class="i" data-info="aportado" aria-label="O que entra no total aportado">i</button><br><b id="hApo"></b></span>
@@ -290,7 +294,7 @@ dialog table td:first-child { white-space:normal; }
       <div class="msg" id="cMsg"></div>
     </div>
     <!-- versão: MAIOR.MÉDIO.MENOR (ver CLAUDE.md); atualizar a cada publicação -->
-    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Prev Jr · versão 1.1.0 · 24/10/2026</p>
+    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Prev Jr · versão 1.2.0 · 24/10/2026</p>
   </section>
 </main>
 
@@ -329,7 +333,7 @@ dialog table td:first-child { white-space:normal; }
 </nav>
 
 <!-- "?v=" = versão do app: o celular baixa o calc.js novo junto com a tela nova (sem misturar com a cópia antiga do cache) -->
-<script src="calc.js?v=1.1.0"></script>
+<script src="calc.js?v=1.2.0"></script>
 <script>
 const KEY = 'prev-jr';
 const vazio = { saldoInicial: { part: 0, cgl: 0 }, meses: [], ultimoBackup: null };
@@ -398,6 +402,14 @@ async function compartilhar(arq, titulo) {
 }
 
 let L = []; // meses calculados, do mais antigo para o mais novo
+// Valores em R$ do topo e dos cartões Participante/Cargill começam escondidos sempre que o app abre (não é guardado);
+// o olho mostra/esconde. Os % continuam sempre visíveis.
+let ocultar = true;
+const OCULTO = 'R$ *****';
+const esconde = txt => ocultar ? OCULTO : txt;
+const brlVisivel = n => brl(n);
+const OLHO_ABERTO = '<svg viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+const OLHO_FECHADO = '<svg viewBox="0 0 24 24"><path d="M17.9 17.9A10 10 0 0 1 12 19c-7 0-11-7-11-7a18 18 0 0 1 5.1-5.9M9.9 5.2A9 9 0 0 1 12 5c7 0 11 7 11 7a18 18 0 0 1-2.2 3.2M1 1l22 22"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>';
 // Simulação: a conta real é a Super Conservador, então ela aparece só como "Real (Super Conservador)" (o campo de % continua no lançamento)
 const REAL = 'Real (Super Conservador)', MODS_SIM = MODS.filter(([k]) => k !== 'sc');
 let exportPos = null, exportAp = null; // linhas na tela (Resumido da Posição / tabela do Aporte) para Exportar para Excel
@@ -433,21 +445,23 @@ function render() {
   // topo
   $('hRef').textContent = u ? 'Ref. ' + mesTxt(u.ym) : '';
   const iniTotal = PARTES.reduce((s, [p]) => s + (db.saldoInicial[p] || 0), 0);
-  $('hPos').textContent = brl(u ? u.saldo : iniTotal);
+  $('hPos').textContent = esconde(brl(u ? u.saldo : iniTotal));
+  $('hOlho').innerHTML = ocultar ? OLHO_FECHADO : OLHO_ABERTO;
+  $('hOlho').setAttribute('aria-label', ocultar ? 'Mostrar valores' : 'Esconder valores');
   $('hPct').className = 'pill ' + cor(u?.acum ?? 0);
   // o acumulado soma os % a partir do 1º mês lançado (o saldo do mês anterior a ele é só o ponto de partida)
   const desde = L.length ? ' desde ' + mesNome(L[0].ym) : '';
   $('hPct').innerHTML = ((u?.acum ?? 0) >= 0 ? `▲ ${pct(u?.acum ?? 0)}` : `▼ ${pct(u.acum)}`) + ' acumulado' + desde;
   $('hMes').innerHTML = u ? 'Mês: ' + seta(u.rent) : '';
-  $('hApo').textContent = brl(L.reduce((s, l) => s + l.aporte, 0));
-  $('hLuc').innerHTML = dif(L.reduce((s, l) => s + l.lucro, 0));
+  $('hApo').textContent = esconde(brl(L.reduce((s, l) => s + l.aporte, 0)));
+  $('hLuc').innerHTML = esconde(dif(L.reduce((s, l) => s + l.lucro, 0)));
 
   // Posição: um cartão por parte, depois a lista de meses
   $('pPartes').innerHTML = PARTES.map(([p, nome]) => {
     const soma = c => L.reduce((s, l) => s + l.partes[p][c], 0);
     return `<div class="card"><b>${nome}</b>
-      <div class="grid">${linha('Saldo', `<b>${brl(u ? u.partes[p].saldo : db.saldoInicial[p] || 0)}</b>`)}${linha(`Contribuições${desde}<button class="i" data-info="contrib" aria-label="Como são contadas as contribuições">i</button>`, brl(soma('aporte')))}${
-        linha(`Lucro${desde}<button class="i" data-info="lucroParte" aria-label="Como é calculado o lucro de cada parte">i</button>`, `<b>${dif(soma('lucro'))}</b>`)}${linha('Acumulado' + desde, seta(soma('rent')))}</div></div>`;
+      <div class="grid">${linha('Saldo', `<b>${esconde(brl(u ? u.partes[p].saldo : db.saldoInicial[p] || 0))}</b>`)}${linha(`Contribuições${desde}<button class="i" data-info="contrib" aria-label="Como são contadas as contribuições">i</button>`, esconde(brl(soma('aporte'))))}${
+        linha(`Lucro${desde}<button class="i" data-info="lucroParte" aria-label="Como é calculado o lucro de cada parte">i</button>`, `<b>${esconde(dif(soma('lucro')))}</b>`)}${linha('Acumulado' + desde, seta(soma('rent')))}</div></div>`;
   }).join('');
   const reais = n => fmt(n); // valor sem "R$" (o título da coluna já diz R$)
   const [pDe, pAte] = periodo(filtro, 'pDe', 'pAte', 'pFiltroMsg');
@@ -701,6 +715,8 @@ $('acExp').onclick = () => {
     `prev-jr-acumulada_${nome}.csv`, 'Prev Jr - rentabilidade acumulada');
 };
 
+$('hOlho').onclick = () => { ocultar = !ocultar; render(); };
+
 // --- Posição: caixa "Resumido" (lembrada neste celular) ---
 try { $('pResumido').checked = localStorage.getItem('prev-jr-resumido') === '1'; } catch {}
 // Acumulada: caixa "ranking" (lembrada neste celular)
@@ -711,6 +727,7 @@ $('pResumido').onchange = e => { try { localStorage.setItem('prev-jr-resumido', 
 // --- explicações (botões "i" do topo), com os números atuais ---
 document.addEventListener('click', e => {
   const qual = e.target.closest('[data-info]')?.dataset.info; if (!qual) return;
+  const brl = n => ocultar ? OCULTO : brlVisivel(n);
   const u = L.at(-1), ini = PARTES.reduce((s, [p]) => s + (db.saldoInicial[p] || 0), 0);
   const de = L.length ? mesNome(L[0].ym) : '—', n = L.length;
   const mesAnt = ym => { const [a, m] = ym.split('-').map(Number); return m === 1 ? `${a - 1}-12` : `${a}-${String(m - 1).padStart(2, '0')}`; };
