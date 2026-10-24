@@ -165,7 +165,8 @@ dialog table td:first-child { white-space:normal; }
   <!-- Posição real: lançar o mês e ver a lista -->
   <section id="tab-posicao">
     <div class="partes" id="pPartes"></div>
-    <h2>Meses lançados <span class="mut">(toque para editar na aba Aporte)</span></h2>
+    <h2 class="row" style="align-items:center"><span>Meses lançados <span class="mut">(toque para editar na aba Aporte)</span></span>
+      <button id="mOlho" class="olho" aria-label="Mostrar valores"></button></h2>
     <div class="two">
       <div><label for="pDe">Mês inicial</label><input id="pDe" type="month"></div>
       <div><label for="pAte">Mês final</label><input id="pAte" type="month"></div>
@@ -294,7 +295,7 @@ dialog table td:first-child { white-space:normal; }
       <div class="msg" id="cMsg"></div>
     </div>
     <!-- versão: MAIOR.MÉDIO.MENOR (ver CLAUDE.md); atualizar a cada publicação -->
-    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Prev Jr · versão 1.2.0 · 24/10/2026</p>
+    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Prev Jr · versão 1.3.0 · 24/10/2026</p>
   </section>
 </main>
 
@@ -333,7 +334,7 @@ dialog table td:first-child { white-space:normal; }
 </nav>
 
 <!-- "?v=" = versão do app: o celular baixa o calc.js novo junto com a tela nova (sem misturar com a cópia antiga do cache) -->
-<script src="calc.js?v=1.2.0"></script>
+<script src="calc.js?v=1.3.0"></script>
 <script>
 const KEY = 'prev-jr';
 const vazio = { saldoInicial: { part: 0, cgl: 0 }, meses: [], ultimoBackup: null };
@@ -407,6 +408,9 @@ let L = []; // meses calculados, do mais antigo para o mais novo
 let ocultar = true;
 const OCULTO = 'R$ *****';
 const esconde = txt => ocultar ? OCULTO : txt;
+// olho separado da lista "Meses lançados": esconde só o valor total do mês (e o saldo de cada parte nos cards)
+let ocultarMeses = true;
+const escondeM = (txt, oculto = OCULTO) => ocultarMeses ? oculto : txt;
 const brlVisivel = n => brl(n);
 const OLHO_ABERTO = '<svg viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>';
 const OLHO_FECHADO = '<svg viewBox="0 0 24 24"><path d="M17.9 17.9A10 10 0 0 1 12 19c-7 0-11-7-11-7a18 18 0 0 1 5.1-5.9M9.9 5.2A9 9 0 0 1 12 5c7 0 11 7 11 7a18 18 0 0 1-2.2 3.2M1 1l22 22"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>';
@@ -447,6 +451,8 @@ function render() {
   const iniTotal = PARTES.reduce((s, [p]) => s + (db.saldoInicial[p] || 0), 0);
   $('hPos').textContent = esconde(brl(u ? u.saldo : iniTotal));
   $('hOlho').innerHTML = ocultar ? OLHO_FECHADO : OLHO_ABERTO;
+  $('mOlho').innerHTML = ocultarMeses ? OLHO_FECHADO : OLHO_ABERTO;
+  $('mOlho').setAttribute('aria-label', ocultarMeses ? 'Mostrar valores' : 'Esconder valores');
   $('hOlho').setAttribute('aria-label', ocultar ? 'Mostrar valores' : 'Esconder valores');
   $('hPct').className = 'pill ' + cor(u?.acum ?? 0);
   // o acumulado soma os % a partir do 1º mês lançado (o saldo do mês anterior a ele é só o ponto de partida)
@@ -488,13 +494,13 @@ function render() {
     : !lista.length ? '<p class="mut">Nenhum mês nesse período.</p>'
     : $('pResumido').checked ? `<div class="card rolagem"><table class="resumo">
       <tr><th>Mês</th><th>Contribuições R$</th><th>Lucro/Juros R$</th><th>Rentab./Mês</th><th>Valor total R$</th></tr>${
-      lista.map(l => `<tr data-ym="${l.ym}"><td>${mesCurto(l.ym)}</td><td>${reais(l.aporte)}</td><td class="${cor(l.lucro)}">${reais(l.lucro)}</td><td class="${cor(l.rent)}">${pct(l.rent)}</td><td><b>${reais(l.saldo)}</b></td></tr>`).join('')}
+      lista.map(l => `<tr data-ym="${l.ym}"><td>${mesCurto(l.ym)}</td><td>${reais(l.aporte)}</td><td class="${cor(l.lucro)}">${reais(l.lucro)}</td><td class="${cor(l.rent)}">${pct(l.rent)}</td><td><b>${escondeM(reais(l.saldo), '*****')}</b></td></tr>`).join('')}
       <tr class="soma"><td>Soma</td><td>${reais(soma.aporte)}</td><td class="${cor(soma.lucro)}">${reais(soma.lucro)}</td><td class="${cor(soma.rent)}">${pct(soma.rent)}</td><td></td></tr></table></div>`
     : lista.map(l => `<div class="card" data-ym="${l.ym}">
-      <div class="row"><span class="tk">${mesTxt(l.ym)}</span><b>${brl(l.saldo)}</b></div>
+      <div class="row"><span class="tk">${mesTxt(l.ym)}</span><b>${escondeM(brl(l.saldo))}</b></div>
       <div class="grid">${linha('Contribuições', brl(l.aporte))}${linha('Lucro/Juros', dif(l.lucro))}${linha('Rentabilidade/Mês', seta(l.rent))}${
         PARTES.map(([p, nome]) => { const x = l.partes[p];
-          return linha(nome, `${brl(x.saldo)}<br><span class="mut">contrib. ${brl(x.aporte)} · ${pctCor(x.taxa)}</span>`); }).join('')}</div>
+          return linha(nome, `${escondeM(brl(x.saldo))}<br><span class="mut">contrib. ${brl(x.aporte)} · ${pctCor(x.taxa)}</span>`); }).join('')}</div>
     </div>`).join('');
 
   // Simulação
@@ -716,6 +722,7 @@ $('acExp').onclick = () => {
 };
 
 $('hOlho').onclick = () => { ocultar = !ocultar; render(); };
+$('mOlho').onclick = () => { ocultarMeses = !ocultarMeses; render(); };
 
 // --- Posição: caixa "Resumido" (lembrada neste celular) ---
 try { $('pResumido').checked = localStorage.getItem('prev-jr-resumido') === '1'; } catch {}
