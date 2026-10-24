@@ -1,6 +1,6 @@
 // Rodar com: node calc.test.js
 const assert = require('assert');
-const { calcular, porAno, saldoPrevisto, protegerSenha, confereSenha, gerarCodigo, limpaCodigo } = require('./calc.js');
+const { calcular, porAno, saldoPrevisto, protegerSenha, confereSenha, gerarCodigo, limpaCodigo, hashSenha, cifrar, decifrar, b64, aleatorio } = require('./calc.js');
 const perto = (a, b) => assert.ok(Math.abs(a - b) < 1e-9, `${a} != ${b}`);
 
 // dados fictícios; fora de ordem de propósito
@@ -53,5 +53,12 @@ perto(calcular({}, [{ ym: '2026-01', part: parte(500, 500, 0) }])[0].rent, 0);
   assert.match(c, /^[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}$/);
   const gc = await protegerSenha(limpaCodigo(c));
   assert.ok(await confereSenha(limpaCodigo(c.toLowerCase().replace(/-/g, ' ')), gc));
+  // backup cifrado: abre com a chave da mesma senha e sal; com senha errada dá erro; texto grande e com acentos volta igual
+  const sal = b64(aleatorio(16)), chave = await hashSenha('senha forte 123', sal);
+  const texto = JSON.stringify({ meses: Array.from({ length: 3000 }, (_, i) => ({ ym: '2026-01', nome: 'Previdência ' + i })) });
+  const cif = await cifrar(texto, chave);
+  assert.ok(!cif.dados.includes('Previdência'));
+  assert.strictEqual(await decifrar(cif, await hashSenha('senha forte 123', sal)), texto);
+  await assert.rejects(decifrar(cif, await hashSenha('senha errada', sal)));
   console.log('ok');
 })();

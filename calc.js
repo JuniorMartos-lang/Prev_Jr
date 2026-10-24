@@ -61,7 +61,7 @@ function porAno(linhas) {
 }
 
 // --- Senha do app (igual à Carteira BDR): guarda só o hash (PBKDF2), nunca a senha ---
-const b64 = u8 => btoa(String.fromCharCode(...u8));
+const b64 = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 8192) s += String.fromCharCode(...u8.subarray(i, i + 8192)); return btoa(s); }; // em pedaços: o backup cifrado pode ser grande
 const deB64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
 const aleatorio = n => crypto.getRandomValues(new Uint8Array(n));
 async function hashSenha(senha, sal) {
@@ -77,5 +77,19 @@ const LETRAS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 const gerarCodigo = () => [...aleatorio(12)].map(x => LETRAS[x % LETRAS.length]).join('').replace(/(.{4})(?!$)/g, '$1-');
 const limpaCodigo = c => c.toUpperCase().replace(/[^A-Z0-9]/g, ''); // aceita com ou sem traços/espaços
 
+// --- Backup protegido com a senha do app (igual à Carteira BDR) ---
+// A chave do backup é tirada da senha com o mesmo PBKDF2 (hashSenha), mas com um sal próprio, diferente do da entrada.
+// O arquivo leva o sal (para tirar a chave de novo a partir da senha) e é cifrado com AES-GCM de 256 bits.
+const chaveAes = (chave, uso) => crypto.subtle.importKey('raw', deB64(chave), 'AES-GCM', false, [uso]);
+async function cifrar(texto, chave) {
+  const iv = aleatorio(12);
+  const c = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await chaveAes(chave, 'encrypt'), new TextEncoder().encode(texto));
+  return { iv: b64(iv), dados: b64(new Uint8Array(c)) };
+}
+async function decifrar({ iv, dados }, chave) { // chave errada → erro (o AES-GCM confere a integridade)
+  const t = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: deB64(iv) }, await chaveAes(chave, 'decrypt'), deB64(dados));
+  return new TextDecoder().decode(t);
+}
+
 if (typeof module !== 'undefined') module.exports = { PARTES, MODS, saldoPrevisto, temAporte, calcular, porAno,
-  protegerSenha, confereSenha, gerarCodigo, limpaCodigo };
+  protegerSenha, confereSenha, gerarCodigo, limpaCodigo, hashSenha, cifrar, decifrar, b64, aleatorio };

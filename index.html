@@ -62,6 +62,13 @@ main { padding:12px 16px; max-width:640px; margin:0 auto; }
 label.check { display:flex; align-items:center; gap:8px; margin:0 0 8px; color:var(--tx); font-size:14px; }
 label.check input { width:auto; margin:0; }
 /* senha: tela de bloqueio cobre tudo, inclusive o menu */
+/* janela de aviso (backup obrigatório, senha do backup ao restaurar) */
+.modal { position:fixed; inset:0; z-index:90; background:rgba(0,0,0,.5); display:flex; align-items:center; justify-content:center; padding:16px; }
+.botoes { display:flex; gap:8px; margin-top:12px; }
+.botoes button { padding:10px 26px; }
+.azul { color:#185fa5; } :root[data-theme=dark] .azul { color:#60a5fa; }
+dialog { max-height:calc(100vh - 48px); overflow:auto; }
+dialog ol, dialog ul { margin:6px 0; padding-left:20px; font-size:14px; }
 #trava { position:fixed; inset:0; z-index:100; background:var(--bg); display:flex; align-items:center; justify-content:center; padding:16px; }
 #trava label.check, #senhaCard label.check { margin-top:10px; }
 .codigo { margin-top:12px; padding:12px; border:2px dashed var(--pri); border-radius:10px; }
@@ -266,7 +273,7 @@ dialog table td:first-child { white-space:normal; }
       <b>Senha do app</b>
       <p class="mut" id="sStatus"></p>
       <div id="sAtualBox"><label for="sAtual">Senha atual</label><input id="sAtual" type="password" autocomplete="current-password"></div>
-      <label for="sNova">Nova senha (mínimo 4 caracteres)</label><input id="sNova" type="password" autocomplete="new-password">
+      <label for="sNova">Nova senha (mínimo 8 caracteres)</label><input id="sNova" type="password" autocomplete="new-password">
       <label for="sConf">Repita a nova senha</label><input id="sConf" type="password" autocomplete="new-password">
       <label class="check"><input type="checkbox" class="verSenha"> Mostrar senha</label>
       <div class="two" style="margin-top:10px">
@@ -283,9 +290,9 @@ dialog table td:first-child { white-space:normal; }
       </div>
     </div>
     <div class="card">
-      <b>Backup</b>
+      <b>Backup</b><button class="i" data-info="backup" aria-label="Como funciona o backup">i</button>
       <p class="mut">Os dados ficam neste celular. Toque em Salvar backup e escolha o OneDrive (e a pasta) na tela de compartilhar. Para restaurar, toque em Restaurar e escolha o arquivo.</p>
-      <p class="mut" id="ultBackup"></p>
+      <p id="ultBackup"></p>
       <div class="two">
         <button id="btnExp">Salvar backup</button>
         <button id="btnImp" class="sec">Restaurar</button>
@@ -294,9 +301,23 @@ dialog table td:first-child { white-space:normal; }
       <div class="msg" id="cMsg"></div>
     </div>
     <!-- versão: MAIOR.MÉDIO.MENOR (ver CLAUDE.md); atualizar a cada publicação -->
-    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Prev Jr · versão 1.4.3 · 24/10/2026</p>
+    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Prev Jr · versão 1.5.0 · 24/10/2026</p>
   </section>
 </main>
+
+<!-- janela de aviso (backup obrigatório, senha do backup ao restaurar) -->
+<div id="modal" class="modal" hidden>
+  <div class="card" style="width:100%; max-width:360px">
+    <b id="mdTitulo" style="font-size:17px"></b>
+    <p id="mdTexto"></p>
+    <div id="mdSenhaBox" hidden>
+      <input id="mdSenha" type="password" autocomplete="off" aria-label="Senha do backup">
+      <label class="check" style="margin-top:10px"><input type="checkbox" class="verSenha" id="mdVer"> Mostrar senha</label>
+    </div>
+    <div class="msg dn" id="mdMsg"></div>
+    <div class="botoes"><button id="mdOk"></button><button type="button" class="sec" id="mdCancelar"></button></div>
+  </div>
+</div>
 
 <!-- tela de bloqueio: aparece ao abrir o app quando há senha -->
 <div id="trava" hidden>
@@ -311,7 +332,7 @@ dialog table td:first-child { white-space:normal; }
     </div>
     <div id="tRecuperar" hidden>
       <label for="tCodigo">Código de recuperação</label><input id="tCodigo" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="XXXX-XXXX-XXXX">
-      <label for="tNova">Nova senha (mínimo 4 caracteres)</label><input id="tNova" type="password" autocomplete="new-password">
+      <label for="tNova">Nova senha (mínimo 8 caracteres)</label><input id="tNova" type="password" autocomplete="new-password">
       <label for="tConf">Repita a nova senha</label><input id="tConf" type="password" autocomplete="new-password">
       <label class="check"><input type="checkbox" class="verSenha"> Mostrar senha</label>
       <button style="width:100%; margin-top:12px">Criar nova senha e entrar</button>
@@ -333,7 +354,7 @@ dialog table td:first-child { white-space:normal; }
 </nav>
 
 <!-- "?v=" = versão do app: o celular baixa o calc.js novo junto com a tela nova (sem misturar com a cópia antiga do cache) -->
-<script src="calc.js?v=1.4.3"></script>
+<script src="calc.js?v=1.5.0"></script>
 <script>
 const KEY = 'prev-jr';
 const vazio = { saldoInicial: { part: 0, cgl: 0 }, meses: [], ultimoBackup: null };
@@ -554,7 +575,9 @@ function render() {
   // saldo inicial segue o olho do topo: com valor e olho fechado, mostra "R$ *****" e não deixa editar
   PARTES.forEach(([p]) => { const v = db.saldoInicial[p] || 0, el = $('cIni_' + p);
     el.readOnly = !!(ocultar && v); el.value = el.readOnly ? OCULTO : txtNum(v); });
-  $('ultBackup').textContent = db.ultimoBackup ? `Último backup: ${db.ultimoBackup.split('-').reverse().join('/')}` : 'Nenhum backup feito ainda.';
+  const quandoBkp = db.ultimoBackupEm ? new Date(db.ultimoBackupEm).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).replace(', ', ' às ')
+    : db.ultimoBackup && db.ultimoBackup.split('-').reverse().join('/'); // backups antigos só guardavam o dia
+  $('ultBackup').innerHTML = quandoBkp ? `Último backup: <b class="azul">${quandoBkp}</b>` : '<b class="dn">Nenhum backup feito ainda.</b>';
   const dias = db.ultimoBackup ? Math.floor((new Date(hoje()) - new Date(db.ultimoBackup)) / 864e5) : null;
   $('lembrete').textContent = db.meses.length && (dias == null || dias >= 7)
     ? `Faça um backup em Ajustes (${dias == null ? 'nenhum feito ainda' : 'último há ' + dias + ' dias'}).` : '';
@@ -746,7 +769,40 @@ document.addEventListener('click', e => {
     return `<p style="margin-bottom:2px"><b>${nome}</b></p><table>${tr('Saldo atual', brl(u?.partes[p].saldo ?? ini_p))}${
       tr(`Saldo de partida (${antDoInicio})`, brl(ini_p), 1)}${tr(`Contribuições de ${de} até hoje`, brl(somaP('aporte')), 1)}<tr><td><b>= Lucro</b></td><td><b>${brl(somaP('lucro'))}</b></td></tr></table>`;
   };
-  $('infoTxt').innerHTML = qual === 'lucroParte' ? `<h3>Lucro desde ${de}</h3>
+  $('infoTxt').innerHTML = qual === 'backup' ? `<b>Sobre o backup</b>
+    <p>O backup é uma cópia de todos os dados do aplicativo (meses lançados com contribuições, % e saldos de Participante e Cargill, os % da Simulação e o saldo inicial), gravada em um arquivo de texto (.txt). Não são incluídos a senha do aplicativo, a configuração de aparência e as preferências de tela (Resumido e Ordenar por Ranking).</p>
+    <b>Como salvar</b>
+    <ol>
+      <li>Toque em <b>Salvar backup</b>.</li>
+      <li>Na tela de compartilhamento, selecione o <b>OneDrive</b> (ou outro destino) e a pasta desejada.</li>
+      <li>Concluído o envio, a data e a hora do último backup ficam registradas nesta tela.</li>
+    </ol>
+    <p>O nome do arquivo leva a data e a hora (ex.: backup-prev-jr-2026-10-24_16-52-37.txt), para que vários backups no mesmo dia não se confundam.</p>
+    <b>Proteção por senha</b>
+    <ul>
+      <li>Se houver senha cadastrada no aplicativo, o arquivo é <b>criptografado</b> (AES de 256 bits) com essa senha e não pode ser lido fora do aplicativo.</li>
+      <li>Se não houver senha cadastrada, o arquivo é gravado <b>sem proteção</b> e pode ser lido por qualquer pessoa que tenha acesso a ele.</li>
+      <li>Cada backup permanece vinculado à senha vigente na data em que foi gerado.</li>
+      <li>Recomenda-se senha com no mínimo <b>8 caracteres</b>, combinando letras e números.</li>
+    </ul>
+    <b>Cadastro ou alteração de senha</b>
+    <p>Sempre que a senha for cadastrada ou alterada (inclusive pela opção "Esqueci a senha"), o aplicativo exige a geração imediata de um novo backup, já protegido com a nova senha.</p>
+    <b>Como restaurar</b>
+    <ol>
+      <li>Toque em <b>Restaurar</b> e selecione o arquivo de backup.</li>
+      <li>Backup gerado com a <b>senha atual</b>: a restauração é imediata.</li>
+      <li>Backup gerado com <b>outra senha</b>: é exibido o aviso "As senhas não coincidem" e solicitada a senha utilizada na data do backup. Em caso de senha incorreta, é possível tentar novamente.</li>
+      <li>Backup <b>sem proteção</b>: a restauração é feita normalmente.</li>
+    </ol>
+    <p class="mut">A restauração substitui todos os dados atuais deste aparelho.</p>
+    <b>Atenção</b>
+    <ul>
+      <li>Não é possível abrir um backup protegido sem a senha correspondente. O código de recuperação desbloqueia apenas o acesso ao aplicativo, não os backups.</li>
+      <li>Guarde as senhas antigas enquanto mantiver backups gerados com elas.</li>
+      <li>Senhas cadastradas antes da versão 1.5.0 passam a proteger os backups após a próxima entrada no aplicativo digitando a senha, ou após a troca de senha.</li>
+      <li>Mantenha a conta do OneDrive protegida, com senha forte e verificação em duas etapas.</li>
+    </ul>`
+  : qual === 'lucroParte' ? `<h3>Lucro desde ${de}</h3>
     <p>É a soma do lucro de cada mês da parte, de <b>${de}</b> <b>até hoje</b>. Lucro do mês = saldo do mês − saldo do mês anterior − contribuição do mês.</p>
     ${PARTES.map(([p, nome]) => contaParte(p, nome)).join('')}
     <p>Somando as duas partes: <b>${brl(luc)}</b> (o Lucro Acumulado Total do topo).</p>
@@ -773,13 +829,13 @@ document.addEventListener('click', e => {
       tr(`Contribuições de ${de} até hoje`, brl(apo), 1)}<tr><td><b>= Lucro Acumulado Total</b></td><td><b>${brl(luc)}</b></td></tr></table>
     <p>Ou seja: tudo o que a conta cresceu sem contar o que foi depositado.</p>
     <p>Por parte: ${PARTES.map(([p, nome]) => `${nome} <b>${brl(L.reduce((s, l) => s + l.partes[p].lucro, 0))}</b>`).join(' · ')}.</p>`;
-  $('info').showModal();
+  $('info').showModal(); $('info').scrollTop = 0; // texto longo (backup): abre no começo, não no botão Fechar
 });
 $('infoOk').onclick = () => $('info').close();
 // confirmação depois de salvar (Aporte, Simulação e saldo inicial); usa a mesma caixa das explicações
 function salvoOk() {
   $('infoTxt').innerHTML = '<h3 style="text-align:center; margin:8px 0"><span class="up">✓</span> Dados Salvos com Sucesso</h3>';
-  $('info').showModal();
+  $('info').showModal(); $('info').scrollTop = 0; // texto longo (backup): abre no começo, não no botão Fechar
 }
 $('info').onclick = e => { if (e.target === $('info')) $('info').close(); }; // toque fora da caixa fecha
 
@@ -803,17 +859,25 @@ $('cSalvarIni').onclick = () => {
 };
 try { $('cTema').value = localStorage.getItem('prev-jr-tema') || 'auto'; } catch {}
 $('cTema').onchange = e => { localStorage.setItem('prev-jr-tema', e.target.value); aplicarTema(); };
-$('btnExp').onclick = async () => {
+// Backup: com senha no app, o arquivo vai cifrado com a chave tirada da senha (trava.backup); sem senha, vai legível como antes
+async function fazerBackup() {
+  let txt = JSON.stringify(db, null, 1);
+  if (trava.backup) txt = JSON.stringify({ prevJrProtegido: 1, sal: trava.backup.sal, ...await cifrar(txt, trava.backup.chave) });
   // .txt: o Chrome do Android recusa compartilhar .json; o conteúdo continua sendo JSON
-  const arq = new File([JSON.stringify(db, null, 1)], `backup-prev-jr-${hoje()}.txt`, { type: 'text/plain' });
-  if (!await compartilhar(arq, 'Backup Prev Jr')) return;
-  db.ultimoBackup = hoje(); salvar(); render();
-};
+  // nome com data e hora (AAAA-MM-DD_HH-MM-SS): vários backups no mesmo dia não colidem; ':' não vale em nome de arquivo
+  const quando = new Date().toLocaleString('sv-SE').replace(' ', '_').replace(/:/g, '-');
+  const arq = new File([txt], `backup-prev-jr-${quando}.txt`, { type: 'text/plain' });
+  if (!await compartilhar(arq, 'Backup Prev Jr')) return false;
+  db.ultimoBackup = hoje(); db.ultimoBackupEm = new Date().toISOString(); salvar(); render();
+  return true;
+}
+$('btnExp').onclick = fazerBackup;
 $('btnImp').onclick = () => $('fileImp').click();
 $('fileImp').onchange = async e => {
   const f = e.target.files[0]; if (!f) return;
   try {
-    const d = JSON.parse(await f.text());
+    let d = JSON.parse(await f.text());
+    if (d.prevJrProtegido) { d = await abrirBackupProtegido(d); if (!d) return; }
     const parteOk = x => x == null || (isFinite(x.saldo) && isFinite(x.aporte) && (x.taxa == null || isFinite(x.taxa)));
     const ok = PARTES.every(([p]) => isFinite(d.saldoInicial?.[p])) && Array.isArray(d.meses) && d.meses.every(m =>
       /^\d{4}-\d{2}$/.test(m.ym) && PARTES.every(([p]) => parteOk(m[p])) && Object.values(m.pct || {}).every(isFinite));
@@ -832,13 +896,49 @@ const KEY_SENHA = 'prev-jr-senha';
 let trava; try { trava = JSON.parse(localStorage.getItem(KEY_SENHA)) || {}; } catch { trava = {}; }
 const salvarTrava = () => localStorage.setItem(KEY_SENHA, JSON.stringify(trava));
 const temSenha = () => !!trava.senha;
-const novaRuim = (a, b) => a.length < 4 ? 'A senha precisa ter pelo menos 4 caracteres.' : a !== b ? 'As duas senhas não são iguais.' : '';
+const novaRuim = (a, b) => a.length < 8 ? 'A senha precisa ter pelo menos 8 caracteres.' : a !== b ? 'As duas senhas não são iguais.' : '';
+// chave do backup tirada da senha (sal próprio); fica só neste aparelho, junto com a senha, fora do backup
+async function definirChaveBackup(senha) { const sal = b64(aleatorio(16)); trava.backup = { sal, chave: await hashSenha(senha, sal) }; }
+
+// Janela de aviso. Devolve true (botão principal) ou false (Cancelar); fica aberta até fecharModal().
+function modal({ titulo, texto, senha = false, ok, cancelar = '', aviso = '' }) {
+  $('mdTitulo').textContent = titulo; $('mdTexto').textContent = texto; $('mdMsg').textContent = aviso;
+  $('mdSenhaBox').hidden = !senha; $('mdSenha').value = ''; $('mdSenha').type = 'password'; $('mdVer').checked = false;
+  $('mdOk').textContent = ok; $('mdCancelar').textContent = cancelar; $('mdCancelar').hidden = !cancelar;
+  $('modal').hidden = false; if (senha) $('mdSenha').focus();
+  return new Promise(res => { $('mdOk').onclick = () => res(true); $('mdCancelar').onclick = () => res(false); });
+}
+const fecharModal = () => { $('modal').hidden = true; };
+// depois de criar/trocar a senha: só fecha quando o backup (já com a senha nova) for feito
+async function backupObrigatorio() {
+  let aviso = '';
+  for (;;) {
+    await modal({ titulo: 'Backup obrigatório', ok: 'Fazer backup agora', aviso,
+      texto: 'A senha do aplicativo foi cadastrada ou alterada. Para que o backup mais recente fique protegido com a nova senha, é necessário gerar um novo backup agora.' });
+    if (await fazerBackup()) { fecharModal(); return; }
+    aviso = 'O backup não foi concluído. Toque em "Fazer backup agora" para tentar novamente.';
+  }
+}
+// Restaurar backup protegido: senha atual (mesmo sal) abre direto; senão pede a senha usada na data do backup
+async function abrirBackupProtegido(d) {
+  if (trava.backup?.sal === d.sal) { try { return JSON.parse(await decifrar(d, trava.backup.chave)); } catch {} }
+  let aviso = '';
+  for (;;) {
+    const ok = await modal({ titulo: temSenha() ? 'As senhas não coincidem' : 'Backup protegido por senha', senha: true,
+      ok: 'Restaurar', cancelar: 'Cancelar', aviso,
+      texto: temSenha() ? 'Este backup foi gerado com uma senha diferente da senha atual do aplicativo. Digite a senha utilizada na data do backup.'
+        : 'Este backup está protegido por senha. Digite a senha utilizada na data do backup.' });
+    if (!ok) { fecharModal(); return null; }
+    try { const r = JSON.parse(await decifrar(d, await hashSenha($('mdSenha').value, d.sal))); fecharModal(); return r; }
+    catch { aviso = 'Senha incorreta. Tente novamente.'; }
+  }
+}
 let bioDisponivel = false;
 
 // "Mostrar senha": vale para os campos de senha do mesmo bloco
 document.addEventListener('change', e => {
   if (!e.target.classList.contains('verSenha')) return;
-  e.target.closest('#tEntrar, #tRecuperar, .card').querySelectorAll('input[type=password], input[data-senha]')
+  e.target.closest('#tEntrar, #tRecuperar, #mdSenhaBox, .card').querySelectorAll('input[type=password], input[data-senha]')
     .forEach(i => { i.dataset.senha = 1; i.type = e.target.checked ? 'text' : 'password'; });
 });
 
@@ -856,15 +956,18 @@ $('sSalvarSenha').onclick = async () => {
   if (temSenha() && !await confereSenha($('sAtual').value, trava.senha)) return msgSenha('Senha atual errada.');
   const erro = novaRuim($('sNova').value, $('sConf').value); if (erro) return msgSenha(erro);
   const criando = !temSenha();
-  trava.senha = await protegerSenha($('sNova').value);
+  trava.senha = await protegerSenha($('sNova').value); await definirChaveBackup($('sNova').value);
+  let codigoNovo = false;
   if (!trava.codigo) { // código de recuperação: gerado uma vez e mostrado só agora
     const c = gerarCodigo(); trava.codigo = await protegerSenha(limpaCodigo(c));
-    $('sCodigo').textContent = c; $('sCodigoBox').hidden = false;
+    $('sCodigo').textContent = c; $('sCodigoBox').hidden = false; codigoNovo = true;
   }
   salvarTrava(); limpaCampos('sAtual', 'sNova', 'sConf'); renderSenha();
   msgSenha(criando ? 'Senha criada.' : 'Senha trocada.', true);
+  // backup obrigatório com a senha nova; se acabou de aparecer o código de recuperação, depois de "Já anotei"
+  if (!codigoNovo) backupObrigatorio();
 };
-$('sCodigoOk').onclick = () => { $('sCodigoBox').hidden = true; $('sCodigo').textContent = ''; };
+$('sCodigoOk').onclick = () => { $('sCodigoBox').hidden = true; $('sCodigo').textContent = ''; backupObrigatorio(); };
 $('sRemover').onclick = async () => {
   if (!await confereSenha($('sAtual').value, trava.senha)) return msgSenha('Digite a senha atual para remover.');
   if (!confirm('Remover a senha? O app vai abrir sem pedir senha.')) return;
@@ -906,10 +1009,16 @@ $('tEsqueci').onclick = () => modoRecuperar(true);
 $('tVoltar').onclick = () => modoRecuperar(false);
 $('tForm').onsubmit = async e => {
   e.preventDefault();
-  if ($('tRecuperar').hidden) return await confereSenha($('tSenha').value, trava.senha) ? liberar() : msgTrava('Senha errada.');
+  if ($('tRecuperar').hidden) {
+    if (!await confereSenha($('tSenha').value, trava.senha)) return msgTrava('Senha errada.');
+    // senha criada antes da proteção do backup: aproveita a senha digitada para criar a chave
+    if (!trava.backup) { await definirChaveBackup($('tSenha').value); salvarTrava(); }
+    return liberar();
+  }
   if (!await confereSenha(limpaCodigo($('tCodigo').value), trava.codigo)) return msgTrava('Código de recuperação errado.');
   const erro = novaRuim($('tNova').value, $('tConf').value); if (erro) return msgTrava(erro);
-  trava.senha = await protegerSenha($('tNova').value); salvarTrava(); liberar(); alert('Senha nova criada.');
+  trava.senha = await protegerSenha($('tNova').value); await definirChaveBackup($('tNova').value); salvarTrava(); liberar();
+  backupObrigatorio();
 };
 // voltou ao app depois de mais de 1 minuto em segundo plano: pede a senha de novo
 let saiu = 0;
