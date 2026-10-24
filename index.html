@@ -218,6 +218,7 @@ dialog table td:first-child { white-space:normal; }
   <section id="tab-acum" hidden>
     <div class="card">
       <b>Rentabilidade acumulada</b> <span class="mut" id="aSub">(soma dos % mensais)</span>
+      <label class="check" style="margin:8px 0 0"><input type="checkbox" id="aRanking"> Ordenar por ranking (maior rentabilidade primeiro)</label>
       <div class="grid" id="aResumo"></div>
     </div>
     <!-- cada tabela num quadro, com os filtros na mesma linha do Todos -->
@@ -289,7 +290,7 @@ dialog table td:first-child { white-space:normal; }
       <div class="msg" id="cMsg"></div>
     </div>
     <!-- versão: MAIOR.MÉDIO.MENOR (ver CLAUDE.md); atualizar a cada publicação -->
-    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Prev Jr · versão 1.0.1 · 23/10/2026</p>
+    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Prev Jr · versão 1.1.0 · 24/10/2026</p>
   </section>
 </main>
 
@@ -328,7 +329,7 @@ dialog table td:first-child { white-space:normal; }
 </nav>
 
 <!-- "?v=" = versão do app: o celular baixa o calc.js novo junto com a tela nova (sem misturar com a cópia antiga do cache) -->
-<script src="calc.js?v=1.0.1"></script>
+<script src="calc.js?v=1.1.0"></script>
 <script>
 const KEY = 'prev-jr';
 const vazio = { saldoInicial: { part: 0, cgl: 0 }, meses: [], ultimoBackup: null };
@@ -500,7 +501,10 @@ function render() {
 
   // Acumulada
   $('aSub').textContent = `(soma dos % mensais${desde})`; // desde = " desde <1º mês lançado>"
-  $('aResumo').innerHTML = linha('<b>Real</b>', seta(u?.acum ?? 0)) + MODS.map(([k, nome]) => linha(nome, seta(u?.acumSim[k] ?? 0))).join('');
+  // Real = Super Conservador (a modalidade não se repete); com "ranking" marcado: do maior para o menor, numerado
+  let itens = [[`<b>${REAL}</b>`, u?.acum ?? 0], ...MODS_SIM.map(([k, nome]) => [nome, u?.acumSim[k] ?? 0])];
+  if ($('aRanking').checked) itens = itens.sort((a, b) => b[1] - a[1]).map(([rot, v], i) => [`${i + 1}. ${rot}`, v]);
+  $('aResumo').innerHTML = itens.map(([rot, v]) => linha(rot, seta(v))).join('');
   // tabelas sem a coluna S.Con.: o Real já é a Super Conservador. Cada linha: [rótulo, real, ...modalidades] (em fração)
   const titulos = ['Real (S. Conv*)', ...MODS_SIM.map(([, , ab]) => ab + '*')]; // "*" = está na legenda abaixo
   const cab = primeira => `<tr><th>${primeira}</th>${titulos.map(t => `<th>${t}</th>`).join('')}</tr>`;
@@ -699,6 +703,9 @@ $('acExp').onclick = () => {
 
 // --- Posição: caixa "Resumido" (lembrada neste celular) ---
 try { $('pResumido').checked = localStorage.getItem('prev-jr-resumido') === '1'; } catch {}
+// Acumulada: caixa "ranking" (lembrada neste celular)
+try { $('aRanking').checked = localStorage.getItem('prev-jr-ranking') === '1'; } catch {}
+$('aRanking').onchange = e => { try { localStorage.setItem('prev-jr-ranking', e.target.checked ? '1' : ''); } catch {} render(); };
 $('pResumido').onchange = e => { try { localStorage.setItem('prev-jr-resumido', e.target.checked ? '1' : ''); } catch {} render(); };
 
 // --- explicações (botões "i" do topo), com os números atuais ---
