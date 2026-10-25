@@ -63,6 +63,7 @@ label.check { display:flex; align-items:center; gap:8px; margin:0 0 8px; color:v
 label.check input { width:auto; margin:0; }
 /* senha: tela de bloqueio cobre tudo, inclusive o menu */
 /* janela de aviso (backup obrigatório, senha do backup ao restaurar) */
+#mdTexto { white-space:pre-line; } /* quebras de linha do texto da janela */
 .modal { position:fixed; inset:0; z-index:90; background:rgba(0,0,0,.5); display:flex; align-items:center; justify-content:center; padding:16px; }
 .botoes { display:flex; gap:8px; margin-top:12px; }
 .botoes button { padding:10px 26px; }
@@ -364,7 +365,7 @@ dialog table td:first-child { white-space:normal; }
       <div class="msg" id="cMsg"></div>
     </div>
     <!-- versão: MAIOR.MÉDIO.MENOR (ver CLAUDE.md); atualizar a cada publicação -->
-    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Financeiro JR · versão 1.8.0 · 25/10/2026</p>
+    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Financeiro JR · versão 1.8.1 · 25/10/2026</p>
   </section>
 </main>
 
@@ -418,7 +419,7 @@ dialog table td:first-child { white-space:normal; }
 </nav>
 
 <!-- "?v=" = versão do app: o celular baixa o calc.js novo junto com a tela nova (sem misturar com a cópia antiga do cache) -->
-<script src="calc.js?v=1.8.0"></script>
+<script src="calc.js?v=1.8.1"></script>
 <script>
 const KEY = 'prev-jr';
 const vazio = { saldoInicial: { part: 0, cgl: 0 }, meses: [], fin: [], ultimoBackup: null }; // fin = lançamentos da aba Financeiro
@@ -941,9 +942,12 @@ $('fcSalvar').onclick = () => {
   if (financeiro(lista).some(l => l.inv === inv && l.saldo < -0.005)) return erro('O saque é maior que o saldo deste investimento nessa data.');
   db.fin = lista; salvar(); render(); limparFin(); salvoOk();
 };
-$('fcExcluir').onclick = () => {
+// pergunta na janela do próprio app (a caixa padrão do navegador pode não aparecer em alguns celulares)
+$('fcExcluir').onclick = async () => {
   const l = (db.fin || []).find(x => x.id === editFin); if (!l) return;
-  if (!confirm(`Deseja mesmo excluir o lançamento?\n\n${l.inv} · ${dataBR(l.data)} · ${l.valor ? brl(l.valor) : fmt(l.pct) + '%'}`)) return;
+  const ok = await modal({ titulo: 'Excluir lançamento', ok: 'Excluir', cancelar: 'Cancelar',
+    texto: `Deseja mesmo excluir o lançamento?\n\n${l.inv} · ${dataBR(l.data)} · ${l.valor ? brl(l.valor) : fmt(l.pct) + '%'}` });
+  fecharModal(); if (!ok) return;
   db.fin = db.fin.filter(x => x.id !== editFin); salvar(); render(); limparFin();
   salvoOk('Excluído com Sucesso');
 };
