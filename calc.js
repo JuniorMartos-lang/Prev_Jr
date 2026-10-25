@@ -60,6 +60,20 @@ function porAno(linhas) {
   return Object.values(anos);
 }
 
+// --- Aba Financeiro: outros investimentos (cadastro livre) ---
+// lancs: [{id, data:'AAAA-MM-DD', inv:'Nome', tipo:'aporte'|'saque', valor, pct}]  (valor em R$, pct = % de juros do lançamento)
+// Para cada investimento, na ordem da data: juros = saldo anterior × %; saldo = anterior + juros + aporte (ou − saque).
+// Como na previdência, o aporte do lançamento não rende no próprio lançamento. Só juros (valor 0) = atualização do saldo.
+function financeiro(lancs) {
+  const saldo = {};
+  return [...lancs].sort((a, b) => a.data.localeCompare(b.data) || a.id - b.id).map(l => {
+    const ant = saldo[l.inv] || 0, juros = ant * (l.pct || 0) / 100;
+    const mov = l.tipo === 'saque' ? -l.valor : l.valor; // saque entra negativo
+    saldo[l.inv] = ant + juros + mov;
+    return { ...l, ym: l.data.slice(0, 7), ant, juros, mov, variacao: juros + mov, saldo: saldo[l.inv] };
+  });
+}
+
 // --- Senha do app (igual à Carteira BDR): guarda só o hash (PBKDF2), nunca a senha ---
 const b64 = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 8192) s += String.fromCharCode(...u8.subarray(i, i + 8192)); return btoa(s); }; // em pedaços: o backup cifrado pode ser grande
 const deB64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
@@ -91,5 +105,5 @@ async function decifrar({ iv, dados }, chave) { // chave errada → erro (o AES-
   return new TextDecoder().decode(t);
 }
 
-if (typeof module !== 'undefined') module.exports = { PARTES, MODS, saldoPrevisto, temAporte, calcular, porAno,
+if (typeof module !== 'undefined') module.exports = { PARTES, MODS, saldoPrevisto, temAporte, calcular, porAno, financeiro,
   protegerSenha, confereSenha, gerarCodigo, limpaCodigo, hashSenha, cifrar, decifrar, b64, aleatorio };

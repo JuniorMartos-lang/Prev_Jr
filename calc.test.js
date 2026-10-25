@@ -1,6 +1,6 @@
 // Rodar com: node calc.test.js
 const assert = require('assert');
-const { calcular, porAno, saldoPrevisto, protegerSenha, confereSenha, gerarCodigo, limpaCodigo, hashSenha, cifrar, decifrar, b64, aleatorio } = require('./calc.js');
+const { calcular, porAno, financeiro, saldoPrevisto, protegerSenha, confereSenha, gerarCodigo, limpaCodigo, hashSenha, cifrar, decifrar, b64, aleatorio } = require('./calc.js');
 const perto = (a, b) => assert.ok(Math.abs(a - b) < 1e-9, `${a} != ${b}`);
 
 // dados fictícios; fora de ordem de propósito
@@ -38,6 +38,19 @@ perto(saldoPrevisto(1000, 1.5, 200), 1000 * 1.015 + 200);
 const so = calcular({ part: 600, cgl: 400 }, [{ ym: '2026-11', part: parte(606, 0, 1), cgl: parte(404, 0, 1) }, { ym: '2026-12', pct: { mod: 2 } }]);
 assert.strictEqual(so.length, 1);
 perto(so[0].saldo, 1010);
+
+// Financeiro: aporte não rende no próprio lançamento; só juros (valor 0) atualiza o saldo; saque diminui; investimentos separados
+const f = financeiro([
+  { id: 3, data: '2026-03-10', inv: 'CDB', tipo: 'saque', valor: 100, pct: 0 },
+  { id: 1, data: '2026-01-05', inv: 'CDB', tipo: 'aporte', valor: 1000, pct: 1 },
+  { id: 2, data: '2026-02-05', inv: 'CDB', tipo: 'aporte', valor: 0, pct: 2 },
+  { id: 4, data: '2026-02-01', inv: 'LCI', tipo: 'aporte', valor: 500, pct: 0 },
+]);
+assert.deepStrictEqual(f.map(l => l.id), [1, 4, 2, 3]);
+perto(f[0].juros, 0); perto(f[0].saldo, 1000);              // 1º aporte: sem saldo anterior, sem juros
+perto(f[2].juros, 20); perto(f[2].variacao, 20); perto(f[2].saldo, 1020);
+perto(f[3].mov, -100); perto(f[3].saldo, 920);              // saque
+perto(f[1].saldo, 500); assert.strictEqual(f[1].ym, '2026-02');
 
 // saldo inicial zero: 1º mês sem base para %
 perto(calcular({}, [{ ym: '2026-01', part: parte(500, 500, 0) }])[0].rent, 0);
