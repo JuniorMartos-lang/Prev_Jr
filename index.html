@@ -324,7 +324,7 @@ dialog table td:first-child { white-space:normal; }
 
   <section id="tab-config" hidden>
     <div class="card">
-      <b>Saldo inicial (antes do primeiro mês lançado)</b>
+      <b>Saldo Inicial da Previdência Cargill para Cadastro Inicial</b><button class="i" data-info="saldoIni" aria-label="O que é o saldo inicial">i</button>
       <div class="two" id="cIni"></div>
       <p class="mut">É a base do lucro do 1º mês e o ponto de partida das projeções.</p>
       <button id="cSalvarIni">Salvar</button>
@@ -366,7 +366,7 @@ dialog table td:first-child { white-space:normal; }
       <div class="msg" id="cMsg"></div>
     </div>
     <!-- versão: MAIOR.MÉDIO.MENOR (ver CLAUDE.md); atualizar a cada publicação -->
-    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Financeiro JR · versão 1.8.5 · 25/10/2026</p>
+    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Financeiro JR · versão 1.8.6 · 25/10/2026</p>
   </section>
 </main>
 
@@ -420,7 +420,7 @@ dialog table td:first-child { white-space:normal; }
 </nav>
 
 <!-- "?v=" = versão do app: o celular baixa o calc.js novo junto com a tela nova (sem misturar com a cópia antiga do cache) -->
-<script src="calc.js?v=1.8.5"></script>
+<script src="calc.js?v=1.8.6"></script>
 <script>
 const KEY = 'prev-jr';
 const vazio = { saldoInicial: { part: 0, cgl: 0 }, meses: [], fin: [], ultimoBackup: null }; // fin = lançamentos da aba Financeiro
@@ -1008,7 +1008,16 @@ document.addEventListener('click', e => {
     return `<p style="margin-bottom:2px"><b>${nome}</b></p><table>${tr('Saldo atual', brl(u?.partes[p].saldo ?? ini_p))}${
       tr(`Saldo de partida (${antDoInicio})`, brl(ini_p), 1)}${tr(`Contribuições de ${de} até hoje`, brl(somaP('aporte')), 1)}<tr><td><b>= Lucro</b></td><td><b>${brl(somaP('lucro'))}</b></td></tr></table>`;
   };
-  $('infoTxt').innerHTML = qual === 'finLanc' ? `<h3>Lançar investimento</h3>
+  $('infoTxt').innerHTML = qual === 'saldoIni' ? `<h3>Saldo Inicial da Previdência Cargill</h3>
+    <p>Vale <b>só para a Previdência Cargill</b>. Os investimentos da aba Financeiro não usam este campo: o valor que cada um já tinha é lançado lá mesmo, com o tipo <b>Valor inicial</b>.</p>
+    <p>É o saldo da previdência <b>antes do primeiro mês lançado</b> na aba Aporte (hoje ${antDoInicio}), separado em Participante e Cargill.</p>
+    <p>Para que serve:</p>
+    <ul>
+      <li>É a base do lucro do 1º mês: lucro = saldo do 1º mês − saldo inicial − contribuições.</li>
+      <li>É o ponto de partida da Simulação: todas as modalidades começam deste mesmo valor.</li>
+    </ul>
+    <p>Só precisa ser preenchido uma vez, no cadastro inicial. Com o olho do topo fechado, o valor aparece como "R$ *****": toque no olho para ver e editar.</p>`
+  : qual === 'finLanc' ? `<h3>Lançar investimento</h3>
     <p><b>Data</b>: digite só os números; as barras entram sozinhas.</p>
     <p><b>Investimento</b>: escolha um da lista ou digite um nome novo. Ao tocar no campo, o nome fica selecionado para digitar por cima.</p>
     <p><b>Tipo</b>:</p>
@@ -1079,7 +1088,7 @@ document.addEventListener('click', e => {
     <p>É a soma do lucro de cada mês da parte, de <b>${de}</b> <b>até hoje</b>. Lucro do mês = saldo do mês − saldo do mês anterior − contribuição do mês.</p>
     ${PARTES.map(([p, nome]) => contaParte(p, nome)).join('')}
     <p>Somando as duas partes: <b>${brl(luc)}</b> (o Lucro Acumulado Total do topo).</p>
-    <p class="mut">O saldo de partida de cada parte em ${antDoInicio} é estimado (a planilha só dá o total exato). Isso só muda como o lucro de ${de} se divide entre as partes; o total não muda. Dá para corrigir em Ajustes → Saldo inicial.</p>`
+    <p class="mut">O saldo de partida de cada parte em ${antDoInicio} é estimado (a planilha só dá o total exato). Isso só muda como o lucro de ${de} se divide entre as partes; o total não muda. Dá para corrigir em Ajustes → Saldo Inicial da Previdência Cargill.</p>`
   : qual === 'contrib' || qual === 'aportado' ? `<h3>${qual === 'aportado' ? 'Total aportado' : 'Contribuições desde ' + de}</h3>
     <p>É a soma das contribuições de todos os meses, de <b>${de}</b> <b>até hoje</b> (${n} meses).</p>
     <table>${porParte('aporte')}<tr><td><b>Total${qual === 'aportado' ? '' : ' (topo: Total aportado)'}</b></td><td><b>${brl(apo)}</b></td></tr></table>
