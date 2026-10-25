@@ -31,22 +31,22 @@ header { background:var(--pri); color:#fff; padding:12px 16px 40px; padding-top:
 header b { font-size:14px; line-height:1.25; } /* nome longo: quebra em 2 linhas no celular */
 #hRef { flex:none; }
 #hRef { font-size:12px; }
-#topo { max-width:640px; margin:-34px auto 0; padding:0 16px; }
+#topo, #topoFin { max-width:640px; margin:-34px auto 0; padding:0 16px; }
 .posCard { padding:12px 14px; margin-bottom:0; }
 /* olho: mostra/esconde os valores em R$ do topo e dos cartões Participante/Cargill */
 button.olho { background:none; color:var(--pri); padding:2px 4px; border-radius:6px; line-height:0; }
 button.olho svg { width:22px; height:22px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
-#hPos { font-size:28px; font-weight:600; margin:2px 0 4px; font-variant-numeric:tabular-nums; }
+#hPos, #fPos { font-size:28px; font-weight:600; margin:2px 0 4px; font-variant-numeric:tabular-nums; }
 .posCard .row { align-items:center; }
 .posCard b { font-weight:600; font-variant-numeric:tabular-nums; }
 .posCard .divide { margin-top:10px; padding-top:8px; border-top:1px solid var(--bd); }
 .pill { font-size:13px; font-weight:600; padding:2px 8px; border-radius:6px; }
 .pill.up { background:color-mix(in srgb, var(--up) 15%, transparent); }
 .pill.dn { background:color-mix(in srgb, var(--dn) 15%, transparent); }
-#hMes { font-size:13px; }
+#hMes, #fMesPct { font-size:13px; }
 /* "acumulado desde ..." e "Mês" sem quebrar o texto; se não couberem lado a lado, o Mês desce para a linha de baixo */
-#hPct, #hMes { white-space:nowrap; }
-.posCard .row:has(#hPct) { flex-wrap:wrap; row-gap:4px; }
+#hPct, #hMes, #fPct, #fMesPct { white-space:nowrap; }
+.posCard .row:has(#hPct), .posCard .row:has(#fPct) { flex-wrap:wrap; row-gap:4px; }
 main { padding:12px 16px; max-width:640px; margin:0 auto; }
 .card { background:var(--card); border:1px solid var(--bd); border-radius:12px; padding:12px 14px; margin-bottom:10px; }
 .row { display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
@@ -172,6 +172,17 @@ dialog table td:first-child { white-space:normal; }
       <span style="text-align:right"><span class="mut">Lucro Acumulado Total</span><button class="i" data-info="lucro" aria-label="Como é calculado o lucro acumulado total">i</button><br><b id="hLuc"></b></span></div>
   </div>
 </div>
+<!-- cabeçalho da aba Financeiro: mesmos dados, somando todos os investimentos (previdência + cadastrados) -->
+<div id="topoFin" hidden>
+  <div class="card posCard">
+    <div class="row" style="align-items:center"><span class="mut">Posição atual · todos os investimentos</span>
+      <button id="fOlho" class="olho" aria-label="Mostrar valores"></button></div>
+    <div id="fPos">—</div>
+    <div class="row"><span><span id="fPct" class="pill"></span><button class="i" data-info="finTopo" aria-label="Como são calculados os totais">i</button></span><span id="fMesPct"></span></div>
+    <div class="row divide"><span><span class="mut">Total aportado</span><button class="i" data-info="finTopo" aria-label="Como são calculados os totais">i</button><br><b id="fApo"></b></span>
+      <span style="text-align:right"><span class="mut">Lucro Acumulado Total</span><button class="i" data-info="finTopo" aria-label="Como são calculados os totais">i</button><br><b id="fLuc"></b></span></div>
+  </div>
+</div>
 
 <main>
   <div class="msg dn" id="lembrete"></div>
@@ -267,8 +278,7 @@ dialog table td:first-child { white-space:normal; }
   <!-- Financeiro: todos os investimentos (previdência + cadastro próprio) -->
   <section id="tab-fin" hidden>
     <div class="card grupo">
-      <div class="row" style="align-items:center"><b>Posição do mês</b>
-        <button id="fOlho" class="olho" aria-label="Mostrar valores"></button></div>
+      <b>Posição do mês</b>
       <div class="filtros">
         <div><label for="fiMes">Mês base</label><input id="fiMes" type="month"></div>
         <div></div>
@@ -350,7 +360,7 @@ dialog table td:first-child { white-space:normal; }
       <div class="msg" id="cMsg"></div>
     </div>
     <!-- versão: MAIOR.MÉDIO.MENOR (ver CLAUDE.md); atualizar a cada publicação -->
-    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Prev Jr · versão 1.6.0 · 25/10/2026</p>
+    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Prev Jr · versão 1.6.1 · 25/10/2026</p>
   </section>
 </main>
 
@@ -404,7 +414,7 @@ dialog table td:first-child { white-space:normal; }
 </nav>
 
 <!-- "?v=" = versão do app: o celular baixa o calc.js novo junto com a tela nova (sem misturar com a cópia antiga do cache) -->
-<script src="calc.js?v=1.6.0"></script>
+<script src="calc.js?v=1.6.1"></script>
 <script>
 const KEY = 'prev-jr';
 const vazio = { saldoInicial: { part: 0, cgl: 0 }, meses: [], fin: [], ultimoBackup: null }; // fin = lançamentos da aba Financeiro
@@ -522,7 +532,8 @@ function render() {
   const u = L.at(-1), novos = [...L].reverse();
 
   // topo
-  $('hRef').textContent = u ? 'Ref. ' + mesTxt(u.ym) : '';
+  refPrev = u ? 'Ref. ' + mesTxt(u.ym) : '';
+  $('hRef').textContent = abaAtual === 'fin' ? refFin : refPrev;
   const iniTotal = PARTES.reduce((s, [p]) => s + (db.saldoInicial[p] || 0), 0);
   $('hPos').textContent = esconde(brl(u ? u.saldo : iniTotal));
   $('hOlho').innerHTML = ocultar ? OLHO_FECHADO : OLHO_ABERTO;
@@ -803,6 +814,7 @@ $('hOlho').onclick = () => { ocultar = !ocultar; $('cIniMsg').textContent = ''; 
 // --- Aba Financeiro ---
 // Previdência entra sozinha (dos lançamentos da aba Aporte); os outros investimentos vêm do cadastro (db.fin).
 const PREV = 'Previdência Cargill';
+let refFin = '', refPrev = '', abaAtual = 'posicao'; // "Ref." da faixa do topo: muda conforme a aba
 let ocultarFin = true; // olho próprio desta aba, independente do olho do topo; começa escondido ao abrir
 const escondeF = txt => ocultarFin ? '*****' : txt;
 const filtroFi = { de: null, ate: null };
@@ -824,6 +836,24 @@ function renderFin() {
   const todas = linhasFin(), nomes = [...new Set((db.fin || []).map(l => l.inv))].sort();
   $('fcLista').innerHTML = nomes.map(n => `<option value="${escH(n)}">`).join('');
   $('fOlho').innerHTML = ocultarFin ? OLHO_FECHADO : OLHO_ABERTO;
+  // cabeçalho: soma de todos os investimentos (saldo mais recente de cada um, aportes − saques, juros)
+  const atual = {}; todas.forEach(l => { atual[l.inv] = l; }); // linhas já vêm em ordem por investimento
+  const posTot = Object.values(atual).reduce((t, l) => t + l.saldo, 0);
+  const apoTot = todas.reduce((t, l) => t + l.mov, 0), lucTot = todas.reduce((t, l) => t + l.juros, 0);
+  const base = posTot - lucTot, pAcum = base ? lucTot / base : 0;
+  const ymsF = todas.map(l => l.ym).sort(), ultYm = ymsF.at(-1), priYm = ymsF[0];
+  // mês: juros do último mês com lançamento ÷ total no fim do mês anterior
+  const antMes = {}; todas.filter(l => l.ym < ultYm).forEach(l => { antMes[l.inv] = l.saldo; });
+  const baseMes = Object.values(antMes).reduce((t, x) => t + x, 0);
+  const jMes = todas.filter(l => l.ym === ultYm).reduce((t, l) => t + l.juros, 0), pMes = baseMes ? jMes / baseMes : 0;
+  $('fPos').textContent = escondeF(brl(posTot)).replace(/^\*/, 'R$ *');
+  $('fPct').className = 'pill ' + cor(pAcum);
+  $('fPct').innerHTML = (pAcum >= 0 ? `▲ ${pct(pAcum)}` : `▼ ${pct(pAcum)}`) + ' acumulado' + (priYm ? ' desde ' + mesNome(priYm) : '');
+  $('fMesPct').innerHTML = ultYm ? 'Mês: ' + seta(pMes) : '';
+  $('fApo').textContent = escondeF(brl(apoTot)).replace(/^\*/, 'R$ *');
+  $('fLuc').innerHTML = ocultarFin ? 'R$ *****' : dif(lucTot);
+  refFin = ultYm ? 'Ref. ' + mesTxt(ultYm) : '';
+  if (abaAtual === 'fin') $('hRef').textContent = refFin;
   $('fOlho').setAttribute('aria-label', ocultarFin ? 'Mostrar valores' : 'Esconder valores');
   const v = n => fmt(n), cel = n => `<td class="${n < 0 ? 'dn' : ''}">${v(n)}</td>`;
   // 1) Posição do mês base: por investimento, aporte e juros do mês e total no fim do mês
@@ -942,7 +972,15 @@ document.addEventListener('click', e => {
     return `<p style="margin-bottom:2px"><b>${nome}</b></p><table>${tr('Saldo atual', brl(u?.partes[p].saldo ?? ini_p))}${
       tr(`Saldo de partida (${antDoInicio})`, brl(ini_p), 1)}${tr(`Contribuições de ${de} até hoje`, brl(somaP('aporte')), 1)}<tr><td><b>= Lucro</b></td><td><b>${brl(somaP('lucro'))}</b></td></tr></table>`;
   };
-  $('infoTxt').innerHTML = qual === 'fin' ? `<h3>Lançamentos mês a mês</h3>
+  $('infoTxt').innerHTML = qual === 'finTopo' ? `<h3>Todos os investimentos</h3>
+    <p>Este cabeçalho soma a <b>Previdência Cargill</b> (lançada na aba Aporte) com todos os investimentos cadastrados nesta aba.</p>
+    <p><b>Posição atual</b>: soma do total mais recente de cada investimento.</p>
+    <p><b>Total aportado</b>: soma de todos os aportes, menos os saques. Na previdência, as contribuições desde o 1º mês lançado.</p>
+    <p><b>Lucro Acumulado Total</b>: soma de todos os juros (na previdência, o lucro de cada mês).</p>
+    <p><b>% acumulado</b>: lucro acumulado ÷ valor investido (saldo de partida da previdência + total aportado).</p>
+    <p><b>Mês</b>: juros do último mês com lançamento ÷ total de todos os investimentos no fim do mês anterior.</p>
+    <p>Os valores em R$ seguem o olho deste cabeçalho, que é separado do olho da previdência e começa escondido ao abrir o app.</p>`
+  : qual === 'fin' ? `<h3>Lançamentos mês a mês</h3>
     <p><b>Aporte R$</b>: valor aplicado no lançamento. Saques aparecem negativos e a linha fica em vermelho.</p>
     <p><b>Cresc. %</b>: % de juros do mês. Na Previdência Cargill é a rentabilidade real do mês.</p>
     <p><b>Variação R$</b>: quanto o investimento mudou no lançamento = aporte + juros (ou juros − saque).</p>
@@ -1023,6 +1061,8 @@ $('info').onclick = e => { if (e.target === $('info')) $('info').close(); }; // 
 function abrirAba(t) {
   document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x.dataset.tab === t));
   document.querySelectorAll('main section').forEach(s => s.hidden = s.id !== 'tab-' + t);
+  abaAtual = t; $('topo').hidden = t === 'fin'; $('topoFin').hidden = t !== 'fin';
+  $('hRef').textContent = t === 'fin' ? refFin : refPrev;
   scrollTo(0, 0);
   document.querySelector(`nav [data-tab="${t}"]`)?.scrollIntoView({ block: 'nearest', inline: 'nearest' }); // menu rola para os lados
 }
