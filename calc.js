@@ -61,7 +61,8 @@ function porAno(linhas) {
 }
 
 // --- Aba Financeiro: outros investimentos (cadastro livre) ---
-// lancs: [{id, data:'AAAA-MM-DD', inv:'Nome', tipo:'aporte'|'saque', valor, pct}]  (valor em R$, pct = % de juros do lançamento)
+// lancs: [{id, data:'AAAA-MM-DD', inv:'Nome', tipo:'aporte'|'saque'|'inicial', valor, pct}]  (valor em R$, pct = % de juros do lançamento)
+// 'inicial' = valor que o investimento já tinha ao começar a lançar: entra no saldo, mas não conta como aporte (como o saldo inicial da previdência).
 // Para cada investimento, na ordem da data: juros = saldo anterior × %; saldo = anterior + juros + aporte (ou − saque).
 // Como na previdência, o aporte do lançamento não rende no próprio lançamento. Só juros (valor 0) = atualização do saldo.
 function financeiro(lancs) {
@@ -69,8 +70,9 @@ function financeiro(lancs) {
   return [...lancs].sort((a, b) => a.data.localeCompare(b.data) || a.id - b.id).map(l => {
     const ant = saldo[l.inv] || 0, juros = ant * (l.pct || 0) / 100;
     const mov = l.tipo === 'saque' ? -l.valor : l.valor; // saque entra negativo
+    const aporte = l.tipo === 'inicial' ? 0 : mov;          // aportes − saques (o valor inicial fica de fora)
     saldo[l.inv] = ant + juros + mov;
-    return { ...l, ym: l.data.slice(0, 7), ant, juros, mov, variacao: juros + mov, saldo: saldo[l.inv] };
+    return { ...l, ym: l.data.slice(0, 7), ant, juros, mov, aporte, variacao: juros + mov, saldo: saldo[l.inv] };
   });
 }
 

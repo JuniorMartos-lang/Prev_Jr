@@ -51,6 +51,10 @@ perto(f[0].juros, 0); perto(f[0].saldo, 1000);              // 1º aporte: sem s
 perto(f[2].juros, 20); perto(f[2].variacao, 20); perto(f[2].saldo, 1020);
 perto(f[3].mov, -100); perto(f[3].saldo, 920);              // saque
 perto(f[1].saldo, 500); assert.strictEqual(f[1].ym, '2026-02');
+perto(f[3].aporte, -100); perto(f[0].aporte, 1000);
+// valor inicial: entra no saldo e rende depois, mas não conta como aporte
+const fi = financeiro([{ id: 1, data: '2026-01-01', inv: 'X', tipo: 'inicial', valor: 2000, pct: 0 }, { id: 2, data: '2026-02-01', inv: 'X', tipo: 'aporte', valor: 100, pct: 1 }]);
+perto(fi[0].aporte, 0); perto(fi[0].saldo, 2000); perto(fi[1].juros, 20); perto(fi[1].aporte, 100); perto(fi[1].saldo, 2120);
 
 // saldo inicial zero: 1º mês sem base para %
 perto(calcular({}, [{ ym: '2026-01', part: parte(500, 500, 0) }])[0].rent, 0);

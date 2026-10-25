@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Prev Jr</title>
+<title>Financeiro JR</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -159,12 +159,12 @@ dialog table td:first-child { white-space:normal; }
 </head>
 <body>
 <header>
-  <b>Previdência e Cooperativa Antonio Carlos Martos Junior</b>
+  <b>Previdência e Financeiro Antonio Carlos Martos Junior</b>
   <span id="hRef"></span>
 </header>
 <div id="topo">
   <div class="card posCard">
-    <div class="row" style="align-items:center"><span class="mut">Posição atual</span>
+    <div class="row" style="align-items:center"><span class="mut">Posição Atual Cargill Prev</span>
       <button id="hOlho" class="olho" aria-label="Mostrar valores"></button></div>
     <div id="hPos">—</div>
     <div class="row"><span><span id="hPct" class="pill"></span><button class="i" data-info="acum" aria-label="Como é calculado o acumulado">i</button></span><span id="hMes"></span></div>
@@ -301,7 +301,7 @@ dialog table td:first-child { white-space:normal; }
       <b id="fcTit">Lançar investimento</b>
       <div class="two">
         <div><label for="fcData">Data</label><input id="fcData" inputmode="numeric" data-mask="data" placeholder="dd/mm/aaaa"></div>
-        <div><label for="fcTipo">Tipo</label><select id="fcTipo"><option value="aporte">Aporte</option><option value="saque">Saque (retirada)</option></select></div>
+        <div><label for="fcTipo">Tipo</label><select id="fcTipo"><option value="aporte">Aporte</option><option value="inicial">Valor inicial</option><option value="saque">Saque (retirada)</option></select></div>
       </div>
       <label for="fcInv">Investimento</label><input id="fcInv" list="fcLista" autocomplete="off" placeholder="Escolha um existente ou digite um novo"><datalist id="fcLista"></datalist>
       <div class="two">
@@ -360,7 +360,7 @@ dialog table td:first-child { white-space:normal; }
       <div class="msg" id="cMsg"></div>
     </div>
     <!-- versão: MAIOR.MÉDIO.MENOR (ver CLAUDE.md); atualizar a cada publicação -->
-    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Prev Jr · versão 1.6.1 · 25/10/2026</p>
+    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Financeiro JR · versão 1.7.0 · 25/10/2026</p>
   </section>
 </main>
 
@@ -381,7 +381,7 @@ dialog table td:first-child { white-space:normal; }
 <!-- tela de bloqueio: aparece ao abrir o app quando há senha -->
 <div id="trava" hidden>
   <form class="card" id="tForm" style="width:100%; max-width:360px">
-    <div style="text-align:center"><b style="font-size:18px">Prev Jr</b><p class="mut">Digite sua senha para entrar</p></div>
+    <div style="text-align:center"><b style="font-size:18px">Financeiro JR</b><p class="mut">Digite sua senha para entrar</p></div>
     <div id="tEntrar">
       <input id="tSenha" type="password" autocomplete="current-password" aria-label="Senha">
       <label class="check"><input type="checkbox" class="verSenha"> Mostrar senha</label>
@@ -414,7 +414,7 @@ dialog table td:first-child { white-space:normal; }
 </nav>
 
 <!-- "?v=" = versão do app: o celular baixa o calc.js novo junto com a tela nova (sem misturar com a cópia antiga do cache) -->
-<script src="calc.js?v=1.6.1"></script>
+<script src="calc.js?v=1.7.0"></script>
 <script>
 const KEY = 'prev-jr';
 const vazio = { saldoInicial: { part: 0, cgl: 0 }, meses: [], fin: [], ultimoBackup: null }; // fin = lançamentos da aba Financeiro
@@ -577,7 +577,7 @@ function render() {
   $('lPos').innerHTML = !novos.length ? '<p class="mut">Nenhum mês lançado ainda. Lance o mês na aba Aporte.</p>'
     : !lista.length ? '<p class="mut">Nenhum mês nesse período.</p>'
     : $('pResumido').checked ? `<div class="card rolagem"><table class="resumo">
-      <tr><th>Mês</th><th>Contribuições R$</th><th>Lucro/Juros R$</th><th>Rentab./Mês</th><th>Valor total R$</th></tr>${
+      <tr><th>Mês</th><th>Aporte R$</th><th>Lucro R$</th><th>% Mês</th><th>Valor total R$</th></tr>${
       lista.map(l => `<tr data-ym="${l.ym}"><td>${mesCurto(l.ym)}</td><td>${reais(l.aporte)}</td><td class="${cor(l.lucro)}">${reais(l.lucro)}</td><td class="${cor(l.rent)}">${pct(l.rent)}</td><td><b>${escondeM(reais(l.saldo), '*****')}</b></td></tr>`).join('')}
       <tr class="soma"><td>Soma</td><td>${reais(soma.aporte)}</td><td class="${cor(soma.lucro)}">${reais(soma.lucro)}</td><td class="${cor(soma.rent)}">${pct(soma.rent)}</td><td></td></tr></table></div>`
     : lista.map(l => `<div class="card" data-ym="${l.ym}">
@@ -781,7 +781,7 @@ const exportarCSV = (linhas, arquivo, titulo) =>
   compartilhar(new File(['\ufeff' + linhas.map(l => l.join(';')).join('\r\n')], arquivo, { type: 'text/csv' }), titulo);
 $('pExp').onclick = () => {
   const { de, ate, linhas, soma } = exportPos;
-  exportarCSV([['Mês', 'Contribuições R$', 'Lucro/Juros R$', 'Rentab./Mês', 'Valor total R$'],
+  exportarCSV([['Mês', 'Aporte R$', 'Lucro R$', '% Mês', 'Valor total R$'],
     ...linhas.map(([mes, apo, luc, rent, saldo]) => [`="${mes}"`, nX(apo), nX(luc), nX(rent * 100) + '%', nX(saldo)]),
     ['Soma', nX(soma.aporte), nX(soma.lucro), nX(soma.rent * 100) + '%', '']],
     `prev-jr-meses-${de}-a-${ate}.csv`, 'Prev Jr - meses lançados');
@@ -828,7 +828,7 @@ const dataISO = br => { // "25/10/2026" → "2026-10-25" (null se a data não ex
 };
 // todas as linhas no mesmo formato: previdência (uma por mês lançado) + cadastro
 function linhasFin() {
-  const prev = L.map(l => ({ prev: true, inv: PREV, ym: l.ym, data: l.ym + '-01', mov: l.aporte, juros: l.lucro,
+  const prev = L.map(l => ({ prev: true, inv: PREV, ym: l.ym, data: l.ym + '-01', mov: l.aporte, aporte: l.aporte, juros: l.lucro,
     variacao: l.aporte + l.lucro, saldo: l.saldo, pctMes: l.rent * 100 }));
   return [...prev, ...financeiro(db.fin || []).map(l => ({ ...l, pctMes: l.pct }))];
 }
@@ -839,7 +839,7 @@ function renderFin() {
   // cabeçalho: soma de todos os investimentos (saldo mais recente de cada um, aportes − saques, juros)
   const atual = {}; todas.forEach(l => { atual[l.inv] = l; }); // linhas já vêm em ordem por investimento
   const posTot = Object.values(atual).reduce((t, l) => t + l.saldo, 0);
-  const apoTot = todas.reduce((t, l) => t + l.mov, 0), lucTot = todas.reduce((t, l) => t + l.juros, 0);
+  const apoTot = todas.reduce((t, l) => t + l.aporte, 0), lucTot = todas.reduce((t, l) => t + l.juros, 0);
   const base = posTot - lucTot, pAcum = base ? lucTot / base : 0;
   const ymsF = todas.map(l => l.ym).sort(), ultYm = ymsF.at(-1), priYm = ymsF[0];
   // mês: juros do último mês com lançamento ÷ total no fim do mês anterior
@@ -862,7 +862,7 @@ function renderFin() {
   const pos = [PREV, ...nomes].map(inv => {
     const ls = todas.filter(l => l.inv === inv && l.ym <= M); if (!ls.length) return null;
     const doMes = ls.filter(l => l.ym === M);
-    return [inv, doMes.reduce((t, l) => t + l.mov, 0), doMes.reduce((t, l) => t + l.juros, 0), ls.at(-1).saldo];
+    return [inv, doMes.reduce((t, l) => t + l.aporte, 0), doMes.reduce((t, l) => t + l.juros, 0), ls.at(-1).saldo];
   }).filter(Boolean);
   const sPos = [1, 2, 3].map(i => pos.reduce((t, r) => t + r[i], 0));
   $('fiTab').innerHTML = `<tr><th>Investimento</th><th>Aporte R$</th><th>Juros R$</th><th>Total R$</th></tr>` + (pos.length
@@ -874,10 +874,10 @@ function renderFin() {
   const [de, ate] = periodo(filtroFi, 'fhDe', 'fhAte', 'fhMsg', yms[0], yms.at(-1));
   const lista = todas.filter(l => l.ym >= de && l.ym <= ate).sort((a, b) => b.data.localeCompare(a.data) || (b.id || 0) - (a.id || 0));
   const ultimoDe = {}; [...lista].reverse().forEach(l => { ultimoDe[l.inv] = l.saldo; }); // saldo mais recente de cada investimento no período
-  const s2 = { mov: lista.reduce((t, l) => t + l.mov, 0), varia: lista.reduce((t, l) => t + l.variacao, 0), total: Object.values(ultimoDe).reduce((t, x) => t + x, 0) };
-  $('fhTab').innerHTML = `<tr><th>Mês</th><th>Investimento</th><th>Aporte R$</th><th>Cresc. %</th><th>Variação R$</th><th>Total R$</th></tr>` + (lista.length
+  const s2 = { mov: lista.reduce((t, l) => t + l.aporte, 0), varia: lista.reduce((t, l) => t + l.variacao, 0), total: Object.values(ultimoDe).reduce((t, x) => t + x, 0) };
+  $('fhTab').innerHTML = `<tr><th>Mês</th><th>Investimento</th><th>Aporte R$</th><th>Cresc. %</th><th>Aporte+ Juros R$</th><th>Total R$</th></tr>` + (lista.length
     ? lista.map(l => `<tr ${l.prev ? `data-prevym="${l.ym}"` : `data-fid="${l.id}"`} class="${l.mov < 0 && !l.prev ? 'saque' : ''}">
-        <td>${mesCurto(l.ym)}</td><td class="nomeInv">${escH(l.inv)}</td><td>${v(l.mov)}</td><td>${l.mov < 0 && !l.prev ? fmt(l.pctMes) + '%' : pctCor(l.pctMes)}</td>
+        <td>${mesCurto(l.ym)}</td><td class="nomeInv">${escH(l.inv)}</td><td${l.tipo === 'inicial' ? ' class="mut" title="Valor inicial (não conta como aporte)"' : ''}>${l.tipo === 'inicial' ? 'inicial ' + v(l.valor) : v(l.mov)}</td><td>${l.mov < 0 && !l.prev ? fmt(l.pctMes) + '%' : pctCor(l.pctMes)}</td>
         <td>${v(l.variacao)}</td><td><b>${escondeF(v(l.saldo))}</b></td></tr>`).join('') +
       `<tr class="soma"><td>Soma</td><td></td>${cel(s2.mov)}<td></td>${cel(s2.varia)}<td>${escondeF(v(s2.total))}</td></tr>`
     : '<tr><td colspan="6" class="mut">Nenhum lançamento nesse período.</td></tr>');
@@ -900,7 +900,8 @@ function limparFin() {
   $('fcExcluir').hidden = true; $('fcMsg').textContent = ''; previaFin();
 }
 ['fcData', 'fcInv', 'fcValor', 'fcPct'].forEach(id => $(id).addEventListener('input', previaFin));
-$('fcTipo').onchange = () => { $('fcValLbl').textContent = $('fcTipo').value === 'saque' ? 'Valor sacado' : 'Valor aportado'; previaFin(); };
+const rotuloValor = t => t === 'saque' ? 'Valor sacado' : t === 'inicial' ? 'Valor inicial' : 'Valor aportado';
+$('fcTipo').onchange = () => { $('fcValLbl').textContent = rotuloValor($('fcTipo').value); previaFin(); };
 $('fcLimpar').onclick = limparFin;
 $('fcSalvar').onclick = () => {
   const erro = t => { $('fcMsg').className = 'msg dn'; $('fcMsg').textContent = t; };
@@ -911,7 +912,10 @@ $('fcSalvar').onclick = () => {
   if (inv.toLowerCase() === PREV.toLowerCase()) return erro('A Previdência Cargill entra sozinha (lance na aba Aporte).');
   if (!isFinite(valor) || valor < 0) return erro('Valor inválido.');
   if (!isFinite(pct) || pct <= -100) return erro('% inválido.');
-  if (valor === 0 && pct === 0) return erro(tipo === 'saque' ? 'Digite o valor sacado.' : 'Digite o valor aportado ou o % de juros do mês.');
+  if (valor === 0 && pct === 0) return erro(tipo === 'saque' ? 'Digite o valor sacado.' : tipo === 'inicial' ? 'Digite o valor inicial.' : 'Digite o valor aportado ou o % de juros do mês.');
+  // valor inicial só pode ser o primeiro lançamento do investimento
+  if (tipo === 'inicial' && (db.fin || []).some(l => l.id !== editFin && l.inv === inv && l.data <= data))
+    return erro('O valor inicial tem que ser o primeiro lançamento deste investimento (já existe lançamento nesta data ou antes).');
   const novo = { id: editFin ?? Date.now(), data, inv, tipo, valor, pct };
   const lista = [...(db.fin || []).filter(l => l.id !== editFin), novo];
   if (financeiro(lista).some(l => l.inv === inv && l.saldo < -0.005)) return erro('O saque é maior que o saldo deste investimento nessa data.');
@@ -929,7 +933,7 @@ $('fhTab').onclick = e => {
   editFin = l.id; $('fcTit').textContent = 'Editar lançamento';
   $('fcData').value = dataBR(l.data); $('fcTipo').value = l.tipo; $('fcInv').value = l.inv;
   $('fcValor').value = brl(l.valor); $('fcPct').value = fmt(l.pct);
-  $('fcValLbl').textContent = l.tipo === 'saque' ? 'Valor sacado' : 'Valor aportado';
+  $('fcValLbl').textContent = rotuloValor(l.tipo);
   $('fcExcluir').hidden = false; $('fcMsg').textContent = ''; previaFin();
   $('fcCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
@@ -942,8 +946,8 @@ $('fiExp').onclick = () => {
   const { M, pos, sPos, de, ate, lista, s2 } = exportFin;
   exportarCSV([[`Posição do mês ${mesTxt(M)}`], ['Investimento', 'Aporte R$', 'Juros R$', 'Total R$'],
     ...pos.map(([inv, a, j, t]) => [inv, nX(a), nX(j), nX(t)]), ['Soma', ...sPos.map(nX)], [],
-    ['Lançamentos mês a mês'], ['Mês', 'Investimento', 'Aporte R$', 'Cresc. %', 'Variação R$', 'Total R$'],
-    ...lista.map(l => [`="${mesCurto(l.ym)}"`, l.inv, nX(l.mov), nX(l.pctMes) + '%', nX(l.variacao), nX(l.saldo)]),
+    ['Lançamentos mês a mês'], ['Mês', 'Investimento', 'Aporte R$', 'Cresc. %', 'Aporte+Juros R$', 'Total R$'],
+    ...lista.map(l => [`="${mesCurto(l.ym)}"`, l.inv + (l.tipo === 'inicial' ? ' (valor inicial)' : ''), nX(l.tipo === 'inicial' ? l.valor : l.mov), nX(l.pctMes) + '%', nX(l.variacao), nX(l.saldo)]),
     ['Soma', '', nX(s2.mov), '', nX(s2.varia), nX(s2.total)]], `prev-jr-financeiro_${M}_${de}-a-${ate}.csv`, 'Prev Jr - financeiro');
 };
 
@@ -983,7 +987,8 @@ document.addEventListener('click', e => {
   : qual === 'fin' ? `<h3>Lançamentos mês a mês</h3>
     <p><b>Aporte R$</b>: valor aplicado no lançamento. Saques aparecem negativos e a linha fica em vermelho.</p>
     <p><b>Cresc. %</b>: % de juros do mês. Na Previdência Cargill é a rentabilidade real do mês.</p>
-    <p><b>Variação R$</b>: quanto o investimento mudou no lançamento = aporte + juros (ou juros − saque).</p>
+    <p><b>Aporte+Juros R$</b>: quanto o investimento mudou no lançamento = aporte + juros (ou juros − saque).</p>
+    <p><b>Valor inicial</b>: o que o investimento já tinha quando você começou a lançar. Entra no Total, mas não conta como aporte (aparece em cinza como "inicial" e fica fora da Soma de aportes).</p>
     <p><b>Total R$</b>: saldo do investimento depois do lançamento. Os juros incidem sobre o saldo anterior; o aporte do lançamento não rende no próprio lançamento.</p>
     <p><b>Soma</b>: aportes e variações somados; no Total, a soma do saldo mais recente de cada investimento no período (com o período completo, é igual à Soma da Posição do mês atual).</p>
     <p>A Previdência Cargill entra sozinha, a partir da aba Aporte. Toque numa linha para editar.</p>`
@@ -1103,7 +1108,7 @@ $('fileImp').onchange = async e => {
     const ok = PARTES.every(([p]) => isFinite(d.saldoInicial?.[p])) && Array.isArray(d.meses) && d.meses.every(m =>
       /^\d{4}-\d{2}$/.test(m.ym) && PARTES.every(([p]) => parteOk(m[p])) && Object.values(m.pct || {}).every(isFinite)) &&
       (d.fin == null || (Array.isArray(d.fin) && d.fin.every(l => /^\d{4}-\d{2}-\d{2}$/.test(l.data) && typeof l.inv === 'string' && l.inv &&
-        ['aporte', 'saque'].includes(l.tipo) && isFinite(l.valor) && isFinite(l.pct))));
+        ['aporte', 'saque', 'inicial'].includes(l.tipo) && isFinite(l.valor) && isFinite(l.pct))));
     if (!ok) throw new Error('arquivo não parece um backup deste app');
     if (db.meses.length && !confirm('Isso substitui todos os dados atuais deste celular. Continuar?')) return;
     db = { ...vazio, ...d };
