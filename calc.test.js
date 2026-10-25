@@ -39,7 +39,7 @@ const so = calcular({ part: 600, cgl: 400 }, [{ ym: '2026-11', part: parte(606, 
 assert.strictEqual(so.length, 1);
 perto(so[0].saldo, 1010);
 
-// Financeiro: aporte não rende no próprio lançamento; só juros (valor 0) atualiza o saldo; saque diminui; investimentos separados
+// Financeiro: por valor (o % é só informação) ou só pelo % (valor = total anterior × %, conta como aporte); saque diminui
 const f = financeiro([
   { id: 3, data: '2026-03-10', inv: 'CDB', tipo: 'saque', valor: 100, pct: 0 },
   { id: 1, data: '2026-01-05', inv: 'CDB', tipo: 'aporte', valor: 1000, pct: 1 },
@@ -47,14 +47,13 @@ const f = financeiro([
   { id: 4, data: '2026-02-01', inv: 'LCI', tipo: 'aporte', valor: 500, pct: 0 },
 ]);
 assert.deepStrictEqual(f.map(l => l.id), [1, 4, 2, 3]);
-perto(f[0].juros, 0); perto(f[0].saldo, 1000);              // 1º aporte: sem saldo anterior, sem juros
-perto(f[2].juros, 20); perto(f[2].variacao, 20); perto(f[2].saldo, 1020);
-perto(f[3].mov, -100); perto(f[3].saldo, 920);              // saque
+perto(f[0].saldo, 1000); assert.strictEqual(f[0].cresc, null);   // 1º aporte: sem total anterior, sem %
+perto(f[2].valorCalc, 20); perto(f[2].aporte, 20); perto(f[2].juros, 0); perto(f[2].saldo, 1020); perto(f[2].cresc, 2); // só o %
+perto(f[3].mov, -100); perto(f[3].aporte, -100); perto(f[3].saldo, 920); perto(f[3].cresc, -100 / 1020 * 100); // saque
 perto(f[1].saldo, 500); assert.strictEqual(f[1].ym, '2026-02');
-perto(f[3].aporte, -100); perto(f[0].aporte, 1000);
-// valor inicial: entra no saldo e rende depois, mas não conta como aporte
-const fi = financeiro([{ id: 1, data: '2026-01-01', inv: 'X', tipo: 'inicial', valor: 2000, pct: 0 }, { id: 2, data: '2026-02-01', inv: 'X', tipo: 'aporte', valor: 100, pct: 1 }]);
-perto(fi[0].aporte, 0); perto(fi[0].saldo, 2000); perto(fi[1].juros, 20); perto(fi[1].aporte, 100); perto(fi[1].saldo, 2120);
+// valor inicial: entra no saldo, não conta como aporte e não tem %; aporte por valor: % = valor ÷ total anterior
+const fi = financeiro([{ id: 1, data: '2026-01-01', inv: 'X', tipo: 'inicial', valor: 2000, pct: 0 }, { id: 2, data: '2026-02-01', inv: 'X', tipo: 'aporte', valor: 100, pct: 0 }]);
+perto(fi[0].aporte, 0); perto(fi[0].saldo, 2000); assert.strictEqual(fi[0].cresc, null); perto(fi[1].cresc, 5); perto(fi[1].saldo, 2100);
 
 // saldo inicial zero: 1º mês sem base para %
 perto(calcular({}, [{ ym: '2026-01', part: parte(500, 500, 0) }])[0].rent, 0);

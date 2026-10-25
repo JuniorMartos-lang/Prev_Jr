@@ -135,6 +135,7 @@ nav button.on { color:var(--pri); font-weight:700; }
 .fin .nomeInv { max-width:74px; overflow:hidden; text-overflow:ellipsis; text-align:left; }
 .fin tr.saque td { color:var(--dn); }
 .fin tr.inicial td { color:#185fa5; } :root[data-theme=dark] .fin tr.inicial td { color:#60a5fa; } /* valor inicial do investimento */
+input.calc { color:var(--mut); font-style:italic; } /* campo calculado pelo app (valor ↔ %) */
 button.perigo { background:transparent; color:var(--dn); border:1px solid var(--dn); width:100%; margin-top:8px; }
 table { width:100%; border-collapse:collapse; font-size:13px; font-variant-numeric:tabular-nums; }
 td, th { padding:6px 4px; text-align:right; border-bottom:1px solid var(--bd); white-space:nowrap; }
@@ -309,9 +310,9 @@ dialog table td:first-child { white-space:normal; }
       <label for="fcInv">Investimento</label><input id="fcInv" list="fcLista" data-sel="1" autocomplete="off" placeholder="Escolha um existente ou digite um novo"><datalist id="fcLista"></datalist>
       <div class="two">
         <div><label for="fcValor" id="fcValLbl">Valor aportado</label><input id="fcValor" inputmode="decimal" data-mask="moeda" placeholder="R$ 0,00"></div>
-        <div><label for="fcPct">% do mês (juros)</label><input id="fcPct" inputmode="decimal" data-mask="pct" placeholder="0,00"></div>
+        <div><label for="fcPct">% do mês</label><input id="fcPct" inputmode="decimal" data-mask="pct" placeholder="0,00"></div>
       </div>
-      <p class="mut" style="margin:8px 0 0">Sem valor aportado (R$ 0,00), o lançamento só aplica os juros do mês sobre o saldo do investimento.</p>
+      <p class="mut" style="margin:8px 0 0">Preencha o <b>valor</b> ou o <b>% do mês</b>: o outro é calculado sobre o total anterior do investimento (fica em cinza). No valor inicial o % fica em branco.</p>
       <div class="mut" id="fcPrevia"></div>
       <div class="two" style="margin-top:12px"><button id="fcSalvar">Salvar</button><button id="fcLimpar" class="sec">Limpar</button></div>
       <button id="fcExcluir" class="perigo" hidden>Excluir este lançamento</button>
@@ -363,7 +364,7 @@ dialog table td:first-child { white-space:normal; }
       <div class="msg" id="cMsg"></div>
     </div>
     <!-- versão: MAIOR.MÉDIO.MENOR (ver CLAUDE.md); atualizar a cada publicação -->
-    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Financeiro JR · versão 1.7.1 · 25/10/2026</p>
+    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Financeiro JR · versão 1.8.0 · 25/10/2026</p>
   </section>
 </main>
 
@@ -417,7 +418,7 @@ dialog table td:first-child { white-space:normal; }
 </nav>
 
 <!-- "?v=" = versão do app: o celular baixa o calc.js novo junto com a tela nova (sem misturar com a cópia antiga do cache) -->
-<script src="calc.js?v=1.7.1"></script>
+<script src="calc.js?v=1.8.0"></script>
 <script>
 const KEY = 'prev-jr';
 const vazio = { saldoInicial: { part: 0, cgl: 0 }, meses: [], fin: [], ultimoBackup: null }; // fin = lançamentos da aba Financeiro
@@ -833,7 +834,7 @@ const dataISO = br => { // "25/10/2026" → "2026-10-25" (null se a data não ex
 function linhasFin() {
   const prev = L.map(l => ({ prev: true, inv: PREV, ym: l.ym, data: l.ym + '-01', mov: l.aporte, aporte: l.aporte, juros: l.lucro,
     variacao: l.aporte + l.lucro, saldo: l.saldo, pctMes: l.rent * 100 }));
-  return [...prev, ...financeiro(db.fin || []).map(l => ({ ...l, pctMes: l.pct }))];
+  return [...prev, ...financeiro(db.fin || []).map(l => ({ ...l, pctMes: l.cresc }))];
 }
 function renderFin() {
   const todas = linhasFin(), nomes = [...new Set((db.fin || []).map(l => l.inv))].sort();
@@ -880,7 +881,7 @@ function renderFin() {
   const s2 = { mov: lista.reduce((t, l) => t + l.aporte, 0), varia: lista.reduce((t, l) => t + l.variacao, 0), total: Object.values(ultimoDe).reduce((t, x) => t + x, 0) };
   $('fhTab').innerHTML = `<tr><th>Mês</th><th>Investimento</th><th>Aporte R$</th><th>Cresc. %</th><th>Aporte+ Juros R$</th><th>Total R$</th></tr>` + (lista.length
     ? lista.map(l => `<tr ${l.prev ? `data-prevym="${l.ym}"` : `data-fid="${l.id}"`} class="${l.tipo === 'inicial' ? 'inicial' : l.mov < 0 && !l.prev ? 'saque' : ''}">
-        <td>${mesCurto(l.ym)}</td><td class="nomeInv">${escH(l.inv)}</td><td>${v(l.mov)}</td><td>${l.mov < 0 && !l.prev ? fmt(l.pctMes) + '%' : pctCor(l.pctMes)}</td>
+        <td>${mesCurto(l.ym)}</td><td class="nomeInv">${escH(l.inv)}</td><td>${v(l.mov)}</td><td>${l.mov < 0 && !l.prev ? (l.pctMes == null ? '—' : fmt(l.pctMes) + '%') : pctCor(l.pctMes)}</td>
         <td>${v(l.variacao)}</td><td><b>${escondeF(v(l.saldo))}</b></td></tr>`).join('') +
       `<tr class="soma"><td>Soma</td><td></td>${cel(s2.mov)}<td></td>${cel(s2.varia)}<td>${escondeF(v(s2.total))}</td></tr>`
     : '<tr><td colspan="6" class="mut">Nenhum lançamento nesse período.</td></tr>');
@@ -888,34 +889,50 @@ function renderFin() {
   previaFin();
 }
 // saldo antes e depois do lançamento que está sendo digitado
+let fonteFin = 'valor'; // campo que a pessoa digitou por último (valor ou %); o outro é calculado pelo app
+// lançamento do jeito que será gravado: no aporte, ou só o valor ou só o %
+function lancFin() {
+  const tipo = $('fcTipo').value, usaPct = tipo === 'aporte' && fonteFin === 'pct';
+  return { id: editFin ?? Infinity, data: dataISO($('fcData').value), inv: $('fcInv').value.trim().replace(/\s+/g, ' '), tipo,
+    valor: usaPct ? 0 : num($('fcValor').value) || 0, pct: usaPct ? num($('fcPct').value) || 0 : 0 };
+}
+// calcula o campo que não foi digitado e mostra total anterior → novo total
 function previaFin() {
-  const inv = $('fcInv').value.trim(), data = dataISO($('fcData').value);
-  if (!inv || !data || inv === PREV) { $('fcPrevia').textContent = ''; return; }
-  const outros = (db.fin || []).filter(l => l.id !== editFin);
-  const novo = { id: editFin ?? Infinity, data, inv, tipo: $('fcTipo').value, valor: num($('fcValor').value) || 0, pct: num($('fcPct').value) || 0 };
-  const r = financeiro([...outros, novo]).find(l => l.id === novo.id);
-  $('fcPrevia').textContent = `Saldo anterior: R$ ${escondeF(fmt(r.ant))} · Juros: R$ ${fmt(r.juros)} · Novo total: R$ ${escondeF(fmt(r.saldo))}`;
+  const tipo = $('fcTipo').value;
+  $('fcPct').disabled = tipo !== 'aporte'; // % só se digita no aporte; no valor inicial fica em branco
+  if (tipo === 'inicial') $('fcPct').value = '';
+  const novo = lancFin();
+  if (!novo.inv || !novo.data || novo.inv === PREV) { $('fcPrevia').textContent = ''; return; }
+  const r = financeiro([...(db.fin || []).filter(l => l.id !== editFin), novo]).find(l => l.id === novo.id);
+  const calcPct = tipo !== 'aporte' || fonteFin === 'valor';
+  if (tipo === 'aporte' && fonteFin === 'pct') $('fcValor').value = brl(r.valorCalc);
+  else if (tipo !== 'inicial') $('fcPct').value = r.cresc == null ? '' : fmt(r.cresc);
+  $('fcPct').classList.toggle('calc', calcPct && tipo !== 'inicial'); $('fcValor').classList.toggle('calc', !calcPct);
+  $('fcPrevia').textContent = `Total anterior: R$ ${escondeF(fmt(r.ant))} · Novo total: R$ ${escondeF(fmt(r.saldo))}`;
 }
 function limparFin() {
   editFin = null; $('fcTit').textContent = 'Lançar investimento';
   $('fcData').value = dataBR(hoje()); $('fcTipo').value = 'aporte'; $('fcInv').value = '';
-  $('fcValor').value = brl(0); $('fcPct').value = '0,00'; $('fcValLbl').textContent = 'Valor aportado';
+  $('fcValor').value = brl(0); $('fcPct').value = '0,00'; $('fcValLbl').textContent = 'Valor aportado'; fonteFin = 'valor';
   $('fcExcluir').hidden = true; $('fcMsg').textContent = ''; previaFin();
 }
-['fcData', 'fcInv', 'fcValor', 'fcPct'].forEach(id => $(id).addEventListener('input', previaFin));
+['fcData', 'fcInv'].forEach(id => $(id).addEventListener('input', previaFin));
+$('fcValor').addEventListener('input', () => { fonteFin = 'valor'; previaFin(); });
+$('fcPct').addEventListener('input', () => { fonteFin = 'pct'; previaFin(); });
 const rotuloValor = t => t === 'saque' ? 'Valor sacado' : t === 'inicial' ? 'Valor inicial' : 'Valor aportado';
-$('fcTipo').onchange = () => { $('fcValLbl').textContent = rotuloValor($('fcTipo').value); previaFin(); };
+$('fcTipo').onchange = () => { $('fcValLbl').textContent = rotuloValor($('fcTipo').value); if ($('fcTipo').value !== 'aporte') fonteFin = 'valor'; previaFin(); };
 $('fcLimpar').onclick = limparFin;
 $('fcSalvar').onclick = () => {
   const erro = t => { $('fcMsg').className = 'msg dn'; $('fcMsg').textContent = t; };
-  const data = dataISO($('fcData').value), inv = $('fcInv').value.trim().replace(/\s+/g, ' ');
-  const valor = num($('fcValor').value), pct = num($('fcPct').value), tipo = $('fcTipo').value;
+  const { data, inv, tipo, valor, pct } = lancFin();
   if (!data) return erro('Data inválida. Use dd/mm/aaaa.');
   if (!inv) return erro('Escolha ou digite o investimento.');
   if (inv.toLowerCase() === PREV.toLowerCase()) return erro('A Previdência Cargill entra sozinha (lance na aba Aporte).');
   if (!isFinite(valor) || valor < 0) return erro('Valor inválido.');
   if (!isFinite(pct) || pct <= -100) return erro('% inválido.');
-  if (valor === 0 && pct === 0) return erro(tipo === 'saque' ? 'Digite o valor sacado.' : tipo === 'inicial' ? 'Digite o valor inicial.' : 'Digite o valor aportado ou o % de juros do mês.');
+  if (valor === 0 && pct === 0) return erro(tipo === 'saque' ? 'Digite o valor sacado.' : tipo === 'inicial' ? 'Digite o valor inicial.' : 'Digite o valor aportado ou o % do mês.');
+  const antes = financeiro((db.fin || []).filter(l => l.id !== editFin && l.inv === inv && l.data <= data)).at(-1)?.saldo || 0;
+  if (pct && !antes) return erro('Este investimento ainda não tem total anterior: lance o valor (não só o %).');
   // valor inicial só pode ser o primeiro lançamento do investimento
   if (tipo === 'inicial' && (db.fin || []).some(l => l.id !== editFin && l.inv === inv && l.data <= data))
     return erro('O valor inicial tem que ser o primeiro lançamento deste investimento (já existe lançamento nesta data ou antes).');
@@ -926,9 +943,9 @@ $('fcSalvar').onclick = () => {
 };
 $('fcExcluir').onclick = () => {
   const l = (db.fin || []).find(x => x.id === editFin); if (!l) return;
-  if (!confirm(`Excluir o lançamento de ${l.inv} em ${dataBR(l.data)} (${brl(l.valor)})?`)) return;
+  if (!confirm(`Deseja mesmo excluir o lançamento?\n\n${l.inv} · ${dataBR(l.data)} · ${l.valor ? brl(l.valor) : fmt(l.pct) + '%'}`)) return;
   db.fin = db.fin.filter(x => x.id !== editFin); salvar(); render(); limparFin();
-  $('fcMsg').className = 'msg up'; $('fcMsg').textContent = 'Lançamento excluído.';
+  salvoOk('Excluído com Sucesso');
 };
 // tocar numa linha: lançamento do cadastro abre no quadro de baixo; previdência abre o mês na aba Aporte
 $('fhTab').onclick = e => {
@@ -937,6 +954,7 @@ $('fhTab').onclick = e => {
   const l = (db.fin || []).find(x => String(x.id) === tr.dataset.fid); if (!l) return;
   editFin = l.id; $('fcTit').textContent = 'Editar lançamento';
   $('fcData').value = dataBR(l.data); $('fcTipo').value = l.tipo; $('fcInv').value = l.inv;
+  fonteFin = l.tipo === 'aporte' && !l.valor ? 'pct' : 'valor';
   $('fcValor').value = brl(l.valor); $('fcPct').value = fmt(l.pct);
   $('fcValLbl').textContent = rotuloValor(l.tipo);
   $('fcExcluir').hidden = false; $('fcMsg').textContent = ''; previaFin();
@@ -952,7 +970,7 @@ $('fiExp').onclick = () => {
   exportarCSV([[`Posição do mês ${mesTxt(M)}`], ['Investimento', 'Aporte R$', 'Juros R$', 'Total R$'],
     ...pos.map(([inv, a, j, t]) => [inv, nX(a), nX(j), nX(t)]), ['Soma', ...sPos.map(nX)], [],
     ['Lançamentos mês a mês'], ['Mês', 'Investimento', 'Aporte R$', 'Cresc. %', 'Aporte+Juros R$', 'Total R$'],
-    ...lista.map(l => [`="${mesCurto(l.ym)}"`, l.inv + (l.tipo === 'inicial' ? ' (valor inicial)' : ''), nX(l.tipo === 'inicial' ? l.valor : l.mov), nX(l.pctMes) + '%', nX(l.variacao), nX(l.saldo)]),
+    ...lista.map(l => [`="${mesCurto(l.ym)}"`, l.inv + (l.tipo === 'inicial' ? ' (valor inicial)' : ''), nX(l.mov), l.pctMes == null ? '' : nX(l.pctMes) + '%', nX(l.variacao), nX(l.saldo)]),
     ['Soma', '', nX(s2.mov), '', nX(s2.varia), nX(s2.total)]], `prev-jr-financeiro_${M}_${de}-a-${ate}.csv`, 'Prev Jr - financeiro');
 };
 
@@ -990,8 +1008,14 @@ document.addEventListener('click', e => {
       <li><b>Valor inicial</b>: o que o investimento já tinha quando você começou a lançar. Tem que ser o <b>primeiro lançamento</b> daquele ativo. Entra no total, mas não conta como aporte. Na tabela "Lançamentos mês a mês", <b style="color:#185fa5">a linha fica azul</b> para indicar que é o lançamento inicial daquele ativo.</li>
       <li><b>Saque (retirada)</b>: dinheiro tirado do investimento; a linha fica <b class="dn">vermelha</b>. Não pode ser maior que o saldo.</li>
     </ul>
-    <p><b>% do mês (juros)</b>: rendimento do mês sobre o saldo anterior. Com valor R$ 0,00, o lançamento só aplica os juros.</p>
-    <p><b>Corrigir ou apagar</b>: toque na linha em "Lançamentos mês a mês". Ela abre aqui: altere e toque em <b>Salvar</b>, ou toque em <b>Excluir este lançamento</b>.</p>`
+    <p><b>Valor ou % do mês</b>: preencha só um dos dois.</p>
+    <ul>
+      <li>Só o <b>valor</b>: o app calcula o % (valor ÷ total anterior do investimento), só para mostrar quanto cresceu.</li>
+      <li>Só o <b>% do mês</b>: o app calcula o valor (total do mês anterior × %), que entra como aporte.</li>
+      <li>No <b>valor inicial</b> o % fica sempre em branco.</li>
+    </ul>
+    <p>O campo calculado pelo app aparece em cinza.</p>
+    <p><b>Corrigir ou excluir</b>: toque na linha em "Lançamentos mês a mês". Ela abre aqui: altere e toque em <b>Salvar</b>, ou toque em <b>Excluir este lançamento</b> e confirme.</p>`
   : qual === 'finTopo' ? `<h3>Todos os investimentos</h3>
     <p>Este cabeçalho soma a <b>Previdência Cargill</b> (lançada na aba Aporte) com todos os investimentos cadastrados nesta aba.</p>
     <p><b>Posição atual</b>: soma do total mais recente de cada investimento.</p>
@@ -1002,12 +1026,13 @@ document.addEventListener('click', e => {
     <p>Os valores em R$ seguem o olho deste cabeçalho, que é separado do olho da previdência e começa escondido ao abrir o app.</p>`
   : qual === 'fin' ? `<h3>Lançamentos mês a mês</h3>
     <p><b>Aporte R$</b>: valor aplicado no lançamento. Saques aparecem negativos e a linha fica em vermelho.</p>
-    <p><b>Cresc. %</b>: % de juros do mês. Na Previdência Cargill é a rentabilidade real do mês.</p>
-    <p><b>Aporte+Juros R$</b>: quanto o investimento mudou no lançamento = aporte + juros (ou juros − saque).</p>
+    <p><b>Cresc. %</b>: quanto o lançamento fez o investimento crescer em relação ao total anterior. Na Previdência Cargill é a rentabilidade real do mês.</p>
+    <p><b>Aporte+Juros R$</b>: quanto o investimento mudou no lançamento. Nos investimentos cadastrados é igual ao aporte (ou ao saque); na Previdência Cargill soma as contribuições e o lucro do mês.</p>
     <p><b>Valor inicial</b>: o que o investimento já tinha quando você começou a lançar. Entra no Total, mas não conta como aporte: a linha aparece em <b style="color:#185fa5">azul</b> e o valor fica fora da Soma de aportes.</p>
     <p><b>Total R$</b>: saldo do investimento depois do lançamento. Os juros incidem sobre o saldo anterior; o aporte do lançamento não rende no próprio lançamento.</p>
     <p><b>Soma</b>: aportes e variações somados; no Total, a soma do saldo mais recente de cada investimento no período (com o período completo, é igual à Soma da Posição do mês atual).</p>
-    <p>A Previdência Cargill entra sozinha, a partir da aba Aporte. Toque numa linha para editar.</p>`
+    <p>A Previdência Cargill entra sozinha, a partir da aba Aporte.</p>
+    <p><b>Como excluir um lançamento</b>: toque na linha → ela abre em "Editar lançamento" → toque em <b>Excluir este lançamento</b> → confirme. Aparece "Excluído com Sucesso". (Linhas da Previdência Cargill se corrigem na aba Aporte.)</p>`
   : qual === 'backup' ? `<b>Sobre o backup</b>
     <p>O backup é uma cópia de todos os dados do aplicativo (meses lançados com contribuições, % e saldos de Participante e Cargill, os % da Simulação, o saldo inicial e os investimentos da aba Financeiro), gravada em um arquivo de texto (.txt). Não são incluídos a senha do aplicativo, a configuração de aparência e as preferências de tela (Resumido e Ordenar por Ranking).</p>
     <b>Como salvar</b>
@@ -1072,8 +1097,8 @@ document.addEventListener('click', e => {
 });
 $('infoOk').onclick = () => $('info').close();
 // confirmação depois de salvar (Aporte, Simulação e saldo inicial); usa a mesma caixa das explicações
-function salvoOk() {
-  $('infoTxt').innerHTML = '<h3 style="text-align:center; margin:8px 0"><span class="up">✓</span> Dados Salvos com Sucesso</h3>';
+function salvoOk(txt = 'Dados Salvos com Sucesso') {
+  $('infoTxt').innerHTML = `<h3 style="text-align:center; margin:8px 0"><span class="up">✓</span> ${txt}</h3>`;
   $('info').showModal(); $('info').scrollTop = 0; // texto longo (backup): abre no começo, não no botão Fechar
 }
 $('info').onclick = e => { if (e.target === $('info')) $('info').close(); }; // toque fora da caixa fecha
