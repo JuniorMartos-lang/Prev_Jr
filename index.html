@@ -134,6 +134,7 @@ nav button.on { color:var(--pri); font-weight:700; }
 .fin { font-size:11px; }
 .fin td, .fin th { padding-left:2px; padding-right:2px; }
 .fin .nomeInv { text-align:left; }
+#fhTab td:not(:first-child), #fhTab th:not(:first-child) { padding-left:14px; padding-right:4px; } #fhTab th:nth-child(2) { text-align:left; } /* mês a mês: números afastados (a tabela rola para o lado) */
 .filtros.mesBase { grid-template-columns:1fr auto; } /* Mês base ocupa a linha toda, com "Mês atual" ao lado */
 .fin tr.saque td { color:var(--dn); }
 .fin tr.inicial td { color:#185fa5; } :root[data-theme=dark] .fin tr.inicial td { color:#60a5fa; } /* valor inicial do investimento */
@@ -365,7 +366,7 @@ dialog table td:first-child { white-space:normal; }
       <div class="msg" id="cMsg"></div>
     </div>
     <!-- versão: MAIOR.MÉDIO.MENOR (ver CLAUDE.md); atualizar a cada publicação -->
-    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Financeiro JR · versão 1.8.2 · 25/10/2026</p>
+    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Financeiro JR · versão 1.8.3 · 25/10/2026</p>
   </section>
 </main>
 
@@ -419,7 +420,7 @@ dialog table td:first-child { white-space:normal; }
 </nav>
 
 <!-- "?v=" = versão do app: o celular baixa o calc.js novo junto com a tela nova (sem misturar com a cópia antiga do cache) -->
-<script src="calc.js?v=1.8.2"></script>
+<script src="calc.js?v=1.8.3"></script>
 <script>
 const KEY = 'prev-jr';
 const vazio = { saldoInicial: { part: 0, cgl: 0 }, meses: [], fin: [], ultimoBackup: null }; // fin = lançamentos da aba Financeiro
