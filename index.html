@@ -218,10 +218,10 @@ dialog table td:first-child { white-space:normal; }
       <p class="mut">O saldo é calculado sozinho (saldo anterior + % do mês + contribuição). Se o extrato mostrar outro valor, digite o do extrato.</p>
       <div id="fPartes"></div>
       <div class="two" style="margin-top:12px"><button id="fSalvar">Salvar</button><button id="fLimpar" class="sec">Limpar</button></div>
-      <button id="fExcluir" class="link" hidden>Excluir este mês</button>
+      <button id="fExcluir" class="perigo" hidden>Excluir este lançamento</button>
       <div class="msg" id="fMsg"></div>
     </div>
-    <h2>Valores lançados <span class="mut">(toque na linha para editar)</span></h2>
+    <h2>Valores lançados <span class="mut">(toque na linha para corrigir ou excluir)</span></h2>
     <div class="two">
       <div><label for="apDe">Mês inicial</label><input id="apDe" type="month"></div>
       <div><label for="apAte">Mês final</label><input id="apAte" type="month"></div>
@@ -366,7 +366,7 @@ dialog table td:first-child { white-space:normal; }
       <div class="msg" id="cMsg"></div>
     </div>
     <!-- versão: MAIOR.MÉDIO.MENOR (ver CLAUDE.md); atualizar a cada publicação -->
-    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Financeiro JR · versão 1.8.4 · 25/10/2026</p>
+    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Financeiro JR · versão 1.8.5 · 25/10/2026</p>
   </section>
 </main>
 
@@ -420,7 +420,7 @@ dialog table td:first-child { white-space:normal; }
 </nav>
 
 <!-- "?v=" = versão do app: o celular baixa o calc.js novo junto com a tela nova (sem misturar com a cópia antiga do cache) -->
-<script src="calc.js?v=1.8.4"></script>
+<script src="calc.js?v=1.8.5"></script>
 <script>
 const KEY = 'prev-jr';
 const vazio = { saldoInicial: { part: 0, cgl: 0 }, meses: [], fin: [], ultimoBackup: null }; // fin = lançamentos da aba Financeiro
@@ -730,10 +730,14 @@ $('fSalvar').onclick = () => {
   $('fMsg').textContent = ''; salvoOk();
 };
 $('fLimpar').onclick = limparForm;
-$('fExcluir').onclick = () => {
-  if (!confirm(`Excluir ${mesTxt(editando)}? Os % da simulação desse mês também serão apagados.`)) return;
-  db.meses = db.meses.filter(m => m.ym !== editando);
-  salvar(); render(); limparForm();
+$('fExcluir').onclick = async () => {
+  const m = db.meses.find(x => x.ym === editando); if (!m) return;
+  const ok = await modal({ titulo: 'Excluir lançamento', ok: 'Excluir', cancelar: 'Cancelar',
+    texto: `Deseja mesmo excluir o lançamento?\n\nPrevidência Cargill · ${mesTxt(editando)} · ${brl(PARTES.reduce((t, [p]) => t + (m[p]?.saldo || 0), 0))}\n\nOs % da Simulação deste mês também serão apagados.` });
+  fecharModal(); if (!ok) return;
+  db.meses = db.meses.filter(x => x.ym !== editando);
+  salvar(); render(); limparForm(); $('fMsg').textContent = '';
+  salvoOk('Excluído com Sucesso');
 };
 
 // --- Simulação: % do mês por modalidade ---
