@@ -133,7 +133,8 @@ nav button.on { color:var(--pri); font-weight:700; }
 /* Financeiro: tabelas compactas; nome do investimento cortado com "…"; saque em vermelho */
 .fin { font-size:11px; }
 .fin td, .fin th { padding-left:2px; padding-right:2px; }
-.fin .nomeInv { max-width:74px; overflow:hidden; text-overflow:ellipsis; text-align:left; }
+.fin .nomeInv { text-align:left; }
+.filtros.mesBase { grid-template-columns:1fr auto; } /* Mês base ocupa a linha toda, com "Mês atual" ao lado */
 .fin tr.saque td { color:var(--dn); }
 .fin tr.inicial td { color:#185fa5; } :root[data-theme=dark] .fin tr.inicial td { color:#60a5fa; } /* valor inicial do investimento */
 input.calc { color:var(--mut); font-style:italic; } /* campo calculado pelo app (valor ↔ %) */
@@ -283,9 +284,8 @@ dialog table td:first-child { white-space:normal; }
   <section id="tab-fin" hidden>
     <div class="card grupo">
       <b>Posição do mês</b>
-      <div class="filtros">
+      <div class="filtros mesBase">
         <div><label for="fiMes">Mês base</label><input id="fiMes" type="month"></div>
-        <div></div>
         <button id="fiAtual" class="sec">Mês atual</button>
       </div>
       <div class="rolagem"><table id="fiTab" class="resumo fin"></table></div>
@@ -365,7 +365,7 @@ dialog table td:first-child { white-space:normal; }
       <div class="msg" id="cMsg"></div>
     </div>
     <!-- versão: MAIOR.MÉDIO.MENOR (ver CLAUDE.md); atualizar a cada publicação -->
-    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Financeiro JR · versão 1.8.1 · 25/10/2026</p>
+    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Financeiro JR · versão 1.8.2 · 25/10/2026</p>
   </section>
 </main>
 
@@ -419,7 +419,7 @@ dialog table td:first-child { white-space:normal; }
 </nav>
 
 <!-- "?v=" = versão do app: o celular baixa o calc.js novo junto com a tela nova (sem misturar com a cópia antiga do cache) -->
-<script src="calc.js?v=1.8.1"></script>
+<script src="calc.js?v=1.8.2"></script>
 <script>
 const KEY = 'prev-jr';
 const vazio = { saldoInicial: { part: 0, cgl: 0 }, meses: [], fin: [], ultimoBackup: null }; // fin = lançamentos da aba Financeiro
@@ -870,10 +870,10 @@ function renderFin() {
     return [inv, doMes.reduce((t, l) => t + l.aporte, 0), doMes.reduce((t, l) => t + l.juros, 0), ls.at(-1).saldo];
   }).filter(Boolean);
   const sPos = [1, 2, 3].map(i => pos.reduce((t, r) => t + r[i], 0));
-  $('fiTab').innerHTML = `<tr><th>Investimento</th><th>Aporte R$</th><th>Juros R$</th><th>Total R$</th></tr>` + (pos.length
-    ? pos.map(([inv, a, j, t]) => `<tr><td class="nomeInv">${escH(inv)}</td>${cel(a)}${cel(j)}<td><b>${escondeF(v(t))}</b></td></tr>`).join('') +
-      `<tr class="soma"><td>Soma</td>${cel(sPos[0])}${cel(sPos[1])}<td>${escondeF(v(sPos[2]))}</td></tr>`
-    : '<tr><td colspan="4" class="mut">Nenhum investimento até este mês.</td></tr>');
+  $('fiTab').innerHTML = `<tr><th>Investimento</th><th>Total R$</th></tr>` + (pos.length
+    ? pos.map(([inv, , , t]) => `<tr><td class="nomeInv">${escH(inv)}</td><td><b>${escondeF(v(t))}</b></td></tr>`).join('') +
+      `<tr class="soma"><td>Soma</td><td>${escondeF(v(sPos[2]))}</td></tr>`
+    : '<tr><td colspan="2" class="mut">Nenhum investimento até este mês.</td></tr>');
   // 2) Lançamentos mês a mês (filtro de período; mais recente em cima)
   const yms = todas.map(l => l.ym).sort();
   const [de, ate] = periodo(filtroFi, 'fhDe', 'fhAte', 'fhMsg', yms[0], yms.at(-1));
@@ -971,8 +971,8 @@ ligarFiltro(filtroFi, 'fhDe', 'fhAte', 'fhMsg', 'fhTodos');
 // Exportar: os dois quadros como estão na tela (valores reais, mesmo com o olho fechado)
 $('fiExp').onclick = () => {
   const { M, pos, sPos, de, ate, lista, s2 } = exportFin;
-  exportarCSV([[`Posição do mês ${mesTxt(M)}`], ['Investimento', 'Aporte R$', 'Juros R$', 'Total R$'],
-    ...pos.map(([inv, a, j, t]) => [inv, nX(a), nX(j), nX(t)]), ['Soma', ...sPos.map(nX)], [],
+  exportarCSV([[`Posição do mês ${mesTxt(M)}`], ['Investimento', 'Total R$'],
+    ...pos.map(([inv, , , t]) => [inv, nX(t)]), ['Soma', nX(sPos[2])], [],
     ['Lançamentos mês a mês'], ['Mês', 'Investimento', 'Aporte R$', 'Cresc. %', 'Aporte+Juros R$', 'Total R$'],
     ...lista.map(l => [`="${mesCurto(l.ym)}"`, l.inv + (l.tipo === 'inicial' ? ' (valor inicial)' : ''), nX(l.mov), l.pctMes == null ? '' : nX(l.pctMes) + '%', nX(l.variacao), nX(l.saldo)]),
     ['Soma', '', nX(s2.mov), '', nX(s2.varia), nX(s2.total)]], `prev-jr-financeiro_${M}_${de}-a-${ate}.csv`, 'Prev Jr - financeiro');
