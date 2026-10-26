@@ -366,7 +366,7 @@ dialog table td:first-child { white-space:normal; }
       <div class="msg" id="cMsg"></div>
     </div>
     <!-- versão: MAIOR.MÉDIO.MENOR (ver CLAUDE.md); atualizar a cada publicação -->
-    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Financeiro JR · versão 1.8.7 · 26/10/2026</p>
+    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Financeiro JR · versão 1.8.8 · 26/10/2026</p>
   </section>
 </main>
 
@@ -420,7 +420,7 @@ dialog table td:first-child { white-space:normal; }
 </nav>
 
 <!-- "?v=" = versão do app: o celular baixa o calc.js novo junto com a tela nova (sem misturar com a cópia antiga do cache) -->
-<script src="calc.js?v=1.8.7"></script>
+<script src="calc.js?v=1.8.8"></script>
 <script>
 const KEY = 'prev-jr';
 const vazio = { saldoInicial: { part: 0, cgl: 0 }, meses: [], fin: [], ultimoBackup: null }; // fin = lançamentos da aba Financeiro
@@ -1115,8 +1115,8 @@ document.addEventListener('click', e => {
 });
 $('infoOk').onclick = () => $('info').close();
 // confirmação depois de salvar (Aporte, Simulação e saldo inicial); usa a mesma caixa das explicações
-function salvoOk(txt = 'Dados Salvos com Sucesso') {
-  $('infoTxt').innerHTML = `<h3 style="text-align:center; margin:8px 0"><span class="up">✓</span> ${txt}</h3>`;
+function salvoOk(txt = 'Dados Salvos com Sucesso', det = '') {
+  $('infoTxt').innerHTML = `<h3 style="text-align:center; margin:8px 0"><span class="up">✓</span> ${txt}</h3>` + (det && `<p style="text-align:center">${det}</p>`);
   $('info').showModal(); $('info').scrollTop = 0; // texto longo (backup): abre no começo, não no botão Fechar
 }
 $('info').onclick = e => { if (e.target === $('info')) $('info').close(); }; // toque fora da caixa fecha
@@ -1169,10 +1169,16 @@ $('fileImp').onchange = async e => {
       (d.fin == null || (Array.isArray(d.fin) && d.fin.every(l => /^\d{4}-\d{2}-\d{2}$/.test(l.data) && typeof l.inv === 'string' && l.inv &&
         ['aporte', 'saque', 'inicial'].includes(l.tipo) && isFinite(l.valor) && isFinite(l.pct))));
     if (!ok) throw new Error('arquivo não parece um backup deste app');
-    if (db.meses.length && !confirm('Isso substitui todos os dados atuais deste celular. Continuar?')) return;
+    if (db.meses.length || db.fin?.length) {
+      const ok = await modal({ titulo: 'Restaurar backup', ok: 'Restaurar', cancelar: 'Cancelar',
+        texto: 'Isso substitui todos os dados atuais deste celular pelos dados do backup. Continuar?' });
+      fecharModal(); if (!ok) return;
+    }
     db = { ...vazio, ...d };
-    salvar(); render(); limparForm();
-    $('cMsg').className = 'msg up'; $('cMsg').textContent = `Importados ${d.meses.length} meses${d.fin?.length ? ` e ${d.fin.length} lançamentos de investimentos` : ""}.`;
+    salvar(); render(); limparForm(); limparFin();
+    $('cMsg').textContent = '';
+    const nFin = d.fin?.length || 0;
+    salvoOk('Backup Restaurado com Sucesso', `${d.meses.length} meses da Previdência Cargill e ${nFin} ${nFin === 1 ? 'lançamento' : 'lançamentos'} de investimentos.`);
   } catch (err) { $('cMsg').className = 'msg dn'; $('cMsg').textContent = 'Erro ao importar: ' + err.message; }
   e.target.value = '';
 };
