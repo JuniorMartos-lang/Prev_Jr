@@ -366,7 +366,7 @@ dialog table td:first-child { white-space:normal; }
       <div class="msg" id="cMsg"></div>
     </div>
     <!-- versão: MAIOR.MÉDIO.MENOR (ver CLAUDE.md); atualizar a cada publicação -->
-    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Financeiro JR · versão 1.8.6 · 25/10/2026</p>
+    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Financeiro JR · versão 1.8.7 · 26/10/2026</p>
   </section>
 </main>
 
@@ -420,7 +420,7 @@ dialog table td:first-child { white-space:normal; }
 </nav>
 
 <!-- "?v=" = versão do app: o celular baixa o calc.js novo junto com a tela nova (sem misturar com a cópia antiga do cache) -->
-<script src="calc.js?v=1.8.6"></script>
+<script src="calc.js?v=1.8.7"></script>
 <script>
 const KEY = 'prev-jr';
 const vazio = { saldoInicial: { part: 0, cgl: 0 }, meses: [], fin: [], ultimoBackup: null }; // fin = lançamentos da aba Financeiro
@@ -873,7 +873,7 @@ function renderFin() {
     const ls = todas.filter(l => l.inv === inv && l.ym <= M); if (!ls.length) return null;
     const doMes = ls.filter(l => l.ym === M);
     return [inv, doMes.reduce((t, l) => t + l.aporte, 0), doMes.reduce((t, l) => t + l.juros, 0), ls.at(-1).saldo];
-  }).filter(Boolean);
+  }).filter(Boolean).sort((a, b) => b[3] - a[3]); // maior total primeiro
   const sPos = [1, 2, 3].map(i => pos.reduce((t, r) => t + r[i], 0));
   $('fiTab').innerHTML = `<tr><th>Investimento</th><th>Total R$</th></tr>` + (pos.length
     ? pos.map(([inv, , , t]) => `<tr><td class="nomeInv">${escH(inv)}</td><td><b>${escondeF(v(t))}</b></td></tr>`).join('') +
@@ -882,7 +882,7 @@ function renderFin() {
   // 2) Lançamentos mês a mês (filtro de período; mais recente em cima)
   const yms = todas.map(l => l.ym).sort();
   const [de, ate] = periodo(filtroFi, 'fhDe', 'fhAte', 'fhMsg', yms[0], yms.at(-1));
-  const lista = todas.filter(l => l.ym >= de && l.ym <= ate).sort((a, b) => b.data.localeCompare(a.data) || (b.id || 0) - (a.id || 0));
+  const lista = todas.filter(l => l.ym >= de && l.ym <= ate).sort((a, b) => b.ym.localeCompare(a.ym) || b.saldo - a.saldo || b.data.localeCompare(a.data)); // mês mais recente; no mês, maior total primeiro
   const ultimoDe = {}; [...lista].reverse().forEach(l => { ultimoDe[l.inv] = l.saldo; }); // saldo mais recente de cada investimento no período
   const s2 = { mov: lista.reduce((t, l) => t + l.aporte, 0), varia: lista.reduce((t, l) => t + l.variacao, 0), total: Object.values(ultimoDe).reduce((t, x) => t + x, 0) };
   $('fhTab').innerHTML = `<tr><th>Mês</th><th>Investimento</th><th>Aporte R$</th><th>Cresc. %</th><th>Aporte+ Juros R$</th><th>Total R$</th></tr>` + (lista.length
