@@ -366,7 +366,7 @@ dialog table td:first-child { white-space:normal; }
       <div class="msg" id="cMsg"></div>
     </div>
     <!-- versão: MAIOR.MÉDIO.MENOR (ver CLAUDE.md); atualizar a cada publicação -->
-    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Financeiro JR · versão 1.8.8 · 26/10/2026</p>
+    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Financeiro JR · versão 1.8.9 · 26/10/2026</p>
   </section>
 </main>
 
@@ -420,7 +420,7 @@ dialog table td:first-child { white-space:normal; }
 </nav>
 
 <!-- "?v=" = versão do app: o celular baixa o calc.js novo junto com a tela nova (sem misturar com a cópia antiga do cache) -->
-<script src="calc.js?v=1.8.8"></script>
+<script src="calc.js?v=1.8.9"></script>
 <script>
 const KEY = 'prev-jr';
 const vazio = { saldoInicial: { part: 0, cgl: 0 }, meses: [], fin: [], ultimoBackup: null }; // fin = lançamentos da aba Financeiro
@@ -1059,7 +1059,7 @@ document.addEventListener('click', e => {
       <li>Na tela de compartilhamento, selecione o <b>OneDrive</b> (ou outro destino) e a pasta desejada.</li>
       <li>Concluído o envio, a data e a hora do último backup ficam registradas nesta tela.</li>
     </ol>
-    <p>O nome do arquivo leva a data e a hora (ex.: backup-prev-jr-2026-10-24_16-52-37.txt), para que vários backups no mesmo dia não se confundam.</p>
+    <p>O nome do arquivo leva a data e a hora (ex.: backup_financ-jr-2026-10-24_16-52-37.txt), para que vários backups no mesmo dia não se confundam. Para restaurar, escolha um arquivo que comece com <b>backup_financ-jr</b> (os antigos, <b>backup-prev-jr</b>, também valem).</p>
     <b>Proteção por senha</b>
     <ul>
       <li>Se houver senha cadastrada no aplicativo, o arquivo é <b>criptografado</b> (AES de 256 bits) com essa senha e não pode ser lido fora do aplicativo.</li>
@@ -1151,8 +1151,8 @@ async function fazerBackup() {
   // .txt: o Chrome do Android recusa compartilhar .json; o conteúdo continua sendo JSON
   // nome com data e hora (AAAA-MM-DD_HH-MM-SS): vários backups no mesmo dia não colidem; ':' não vale em nome de arquivo
   const quando = new Date().toLocaleString('sv-SE').replace(' ', '_').replace(/:/g, '-');
-  const arq = new File([txt], `backup-prev-jr-${quando}.txt`, { type: 'text/plain' });
-  if (!await compartilhar(arq, 'Backup Prev Jr')) return false;
+  const arq = new File([txt], `backup_financ-jr-${quando}.txt`, { type: 'text/plain' });
+  if (!await compartilhar(arq, 'Backup Financeiro JR')) return false;
   db.ultimoBackup = hoje(); db.ultimoBackupEm = new Date().toISOString(); salvar(); render();
   return true;
 }
@@ -1160,6 +1160,10 @@ $('btnExp').onclick = fazerBackup;
 $('btnImp').onclick = () => $('fileImp').click();
 $('fileImp').onchange = async e => {
   const f = e.target.files[0]; if (!f) return;
+  if (!/^(backup_financ-jr|backup-prev-jr)/i.test(f.name)) {
+    $('cMsg').className = 'msg dn'; $('cMsg').textContent = 'Escolha um arquivo de backup do app: o nome começa com "backup_financ-jr".';
+    e.target.value = ''; return;
+  }
   try {
     let d = JSON.parse(await f.text());
     if (d.prevJrProtegido) { d = await abrirBackupProtegido(d); if (!d) return; }
