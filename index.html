@@ -61,7 +61,10 @@ main { padding:12px 16px; max-width:640px; margin:0 auto; }
 #lSim .grid > div > :last-child { white-space:nowrap; } /* "% · saldo" numa linha; o rótulo é que quebra */
 label.check { display:flex; align-items:center; gap:8px; margin:0 0 8px; color:var(--tx); font-size:14px; }
 label.check input { width:auto; margin:0; }
-#sFiltroBox { margin:0 0 8px; }
+#sFiltroBox { margin:0 0 8px; position:relative; }
+#sFiltroBtn { width:100%; text-align:left; font-weight:400; background:var(--card); color:var(--tx); border:1px solid var(--bd); border-radius:8px; padding:10px; display:flex; justify-content:space-between; }
+#sFiltro { position:absolute; left:0; right:0; z-index:5; margin-top:4px; background:var(--card); border:1px solid var(--bd); border-radius:8px; padding:4px 12px; box-shadow:0 6px 20px rgba(0,0,0,.18); }
+#sFiltro label.check { margin:0; padding:9px 0; }
 #lSim .resumo td, #lSim .resumo th { white-space:nowrap; padding-left:18px; } /* valor e % na mesma linha; a tabela rola para o lado */
 #lSim .resumo td:first-child, #lSim .resumo th:first-child { padding-left:6px; }
 #lSim .resumo .p { margin-left:8px; }
@@ -250,7 +253,7 @@ dialog table td:first-child { white-space:normal; }
     </div>
     <h2>Mês a mês <span class="mut">(% do mês · saldo projetado)</span></h2>
     <label class="check"><input type="checkbox" id="sTabela"> Ver em tabela (uma linha por mês)</label>
-    <div id="sFiltroBox" hidden><label for="sFiltro">Mostrar (escolha uma ou mais)</label><select id="sFiltro" multiple></select></div>
+    <div id="sFiltroBox" hidden><label for="sFiltroBtn">Mostrar (escolha uma ou mais)</label><button id="sFiltroBtn" type="button" aria-expanded="false"><span id="sFiltroTxt">Todos</span><span>▾</span></button><div id="sFiltro" hidden></div></div>
     <div id="lSim" class="lista"></div>
   </section>
 
@@ -371,7 +374,7 @@ dialog table td:first-child { white-space:normal; }
       <div class="msg" id="cMsg"></div>
     </div>
     <!-- versão: MAIOR.MÉDIO.MENOR (ver CLAUDE.md); atualizar a cada publicação -->
-    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Financeiro JR · versão 1.9.1 · 26/10/2026</p>
+    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Financeiro JR · versão 1.9.2 · 26/10/2026</p>
   </section>
 </main>
 
@@ -425,7 +428,7 @@ dialog table td:first-child { white-space:normal; }
 </nav>
 
 <!-- "?v=" = versão do app: o celular baixa o calc.js novo junto com a tela nova (sem misturar com a cópia antiga do cache) -->
-<script src="calc.js?v=1.9.1"></script>
+<script src="calc.js?v=1.9.2"></script>
 <script>
 const KEY = 'prev-jr';
 const vazio = { saldoInicial: { part: 0, cgl: 0 }, meses: [], fin: [], ultimoBackup: null }; // fin = lançamentos da aba Financeiro
@@ -1008,14 +1011,19 @@ $('aRanking').onchange = e => { try { localStorage.setItem('prev-jr-ranking', e.
 // Simulação em tabela: escolha lembrada no celular; colunas do filtro (padrão: todas) voltam a "Todos" ao abrir o app
 try { $('sTabela').checked = localStorage.getItem('prev-jr-simtabela') === '1'; } catch {}
 $('sTabela').onchange = e => { try { localStorage.setItem('prev-jr-simtabela', e.target.checked ? '1' : ''); } catch {} render(); };
-$('sFiltro').innerHTML = [['todos', 'Todos'], ...SIM_COLS].map(([k, nome]) => `<option value="${k}"${k === 'todos' ? ' selected' : ''}>${nome}</option>`).join('');
-$('sFiltro').onchange = () => {
-  const sel = [...$('sFiltro').selectedOptions].map(o => o.value), cols = sel.filter(k => k !== 'todos');
-  const tinhaTodos = simCols.size === SIM_COLS.length;
-  // "Todos" (escolhido agora, ou nada escolhido) mostra tudo; escolher modalidades com "Todos" já marcado fica só com elas
-  simCols = new Set(!cols.length || sel.includes('todos') && !tinhaTodos ? SIM_COLS.map(([c]) => c) : cols);
-  const todas = simCols.size === SIM_COLS.length;
-  [...$('sFiltro').options].forEach(o => { o.selected = o.value === 'todos' ? todas : !todas && simCols.has(o.value); });
+$('sFiltro').innerHTML = [['todos', 'Todos'], ...SIM_COLS].map(([k, nome]) => `<label class="check"><input type="checkbox" data-col="${k}"${k === 'todos' ? ' checked' : ''}> ${nome}</label>`).join('');
+const abrirFiltroSim = abrir => { $('sFiltro').hidden = !abrir; $('sFiltroBtn').setAttribute('aria-expanded', abrir); };
+$('sFiltroBtn').onclick = () => abrirFiltroSim($('sFiltro').hidden);
+document.addEventListener('click', e => { if (!$('sFiltroBox').contains(e.target)) abrirFiltroSim(false); }); // toque fora fecha
+$('sFiltro').onchange = e => {
+  const k = e.target.dataset.col, todas = simCols.size === SIM_COLS.length;
+  // "Todos" mostra tudo; com "Todos" marcado, marcar uma modalidade fica só com ela; desmarcar a última volta a "Todos"
+  if (k === 'todos' || !e.target.checked && simCols.size === 1) simCols = new Set(SIM_COLS.map(([c]) => c));
+  else if (todas) simCols = new Set([k]);
+  else e.target.checked ? simCols.add(k) : simCols.delete(k);
+  const agora = simCols.size === SIM_COLS.length;
+  $('sFiltro').querySelectorAll('input').forEach(i => { i.checked = i.dataset.col === 'todos' ? agora : !agora && simCols.has(i.dataset.col); });
+  $('sFiltroTxt').textContent = agora ? 'Todos' : SIM_COLS.filter(([c]) => simCols.has(c)).map(([, nome]) => nome).join(', ');
   render();
 };
 $('pResumido').onchange = e => { try { localStorage.setItem('prev-jr-resumido', e.target.checked ? '1' : ''); } catch {} render(); };
