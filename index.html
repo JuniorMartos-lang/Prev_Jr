@@ -61,6 +61,8 @@ main { padding:12px 16px; max-width:640px; margin:0 auto; }
 #lSim .grid > div > :last-child { white-space:nowrap; } /* "% · saldo" numa linha; o rótulo é que quebra */
 label.check { display:flex; align-items:center; gap:8px; margin:0 0 8px; color:var(--tx); font-size:14px; }
 label.check input { width:auto; margin:0; }
+#sFiltro { display:flex; flex-wrap:wrap; gap:2px 14px; margin:0 0 8px; } #sFiltro label.check { margin:0; font-size:13px; }
+#lSim .resumo td, #lSim .resumo th { white-space:nowrap; padding-left:10px; }
 /* senha: tela de bloqueio cobre tudo, inclusive o menu */
 /* janela de aviso (backup obrigatório, senha do backup ao restaurar) */
 #mdTexto { white-space:pre-line; } /* quebras de linha do texto da janela */
@@ -213,15 +215,14 @@ dialog table td:first-child { white-space:normal; }
   <!-- Aporte: lançar / editar o mês (contribuição, % e saldo de cada parte) -->
   <section id="tab-aporte" hidden>
     <div class="card" id="fCard">
-      <b id="fTit">Lançar mês</b>
+      <b id="fTit">Lançar mês</b><button class="i" data-info="apLanc" aria-label="Como lançar o mês">i</button>
       <label for="fMes">Mês</label><input id="fMes" type="month">
-      <p class="mut">O saldo é calculado sozinho (saldo anterior + % do mês + contribuição). Se o extrato mostrar outro valor, digite o do extrato.</p>
       <div id="fPartes"></div>
       <div class="two" style="margin-top:12px"><button id="fSalvar">Salvar</button><button id="fLimpar" class="sec">Limpar</button></div>
       <button id="fExcluir" class="perigo" hidden>Excluir este lançamento</button>
       <div class="msg" id="fMsg"></div>
     </div>
-    <h2>Valores lançados <span class="mut">(toque na linha para corrigir ou excluir)</span></h2>
+    <h2>Valores lançados<button class="i" data-info="apValores" aria-label="Como usar a tabela de valores lançados">i</button></h2>
     <div class="two">
       <div><label for="apDe">Mês inicial</label><input id="apDe" type="month"></div>
       <div><label for="apAte">Mês final</label><input id="apAte" type="month"></div>
@@ -246,6 +247,8 @@ dialog table td:first-child { white-space:normal; }
       <div class="msg" id="sMsg"></div>
     </div>
     <h2>Mês a mês <span class="mut">(% do mês · saldo projetado)</span></h2>
+    <label class="check"><input type="checkbox" id="sTabela"> Ver em tabela (uma linha por mês)</label>
+    <div id="sFiltro" hidden></div>
     <div id="lSim" class="lista"></div>
   </section>
 
@@ -366,7 +369,7 @@ dialog table td:first-child { white-space:normal; }
       <div class="msg" id="cMsg"></div>
     </div>
     <!-- versão: MAIOR.MÉDIO.MENOR (ver CLAUDE.md); atualizar a cada publicação -->
-    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Financeiro JR · versão 1.8.9 · 26/10/2026</p>
+    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Financeiro JR · versão 1.9.0 · 26/10/2026</p>
   </section>
 </main>
 
@@ -420,7 +423,7 @@ dialog table td:first-child { white-space:normal; }
 </nav>
 
 <!-- "?v=" = versão do app: o celular baixa o calc.js novo junto com a tela nova (sem misturar com a cópia antiga do cache) -->
-<script src="calc.js?v=1.8.9"></script>
+<script src="calc.js?v=1.9.0"></script>
 <script>
 const KEY = 'prev-jr';
 const vazio = { saldoInicial: { part: 0, cgl: 0 }, meses: [], fin: [], ultimoBackup: null }; // fin = lançamentos da aba Financeiro
@@ -508,6 +511,8 @@ const OLHO_ABERTO = '<svg viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-
 const OLHO_FECHADO = '<svg viewBox="0 0 24 24"><path d="M17.9 17.9A10 10 0 0 1 12 19c-7 0-11-7-11-7a18 18 0 0 1 5.1-5.9M9.9 5.2A9 9 0 0 1 12 5c7 0 11 7 11 7a18 18 0 0 1-2.2 3.2M1 1l22 22"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>';
 // Simulação: a conta real é a Super Conservador, então ela aparece só como "Real (Super Conservador)" (o campo de % continua no lançamento)
 const REAL = 'Real (Super Conservador)', MODS_SIM = MODS.filter(([k]) => k !== 'sc');
+const SIM_COLS = [['real', 'Real'], ...MODS_SIM.map(([k, nome]) => [k, nome])]; // colunas da Simulação em tabela
+let simCols = new Set(SIM_COLS.map(([k]) => k));
 let exportPos = null, exportAp = null; // linhas na tela (Resumido da Posição / tabela do Aporte) para Exportar para Excel
 const filtro = { de: null, ate: null };   // período da lista de meses da Posição (null = sem limite)
 const filtroAp = { de: null, ate: null }; // período da tabela da aba Aporte
@@ -603,7 +608,15 @@ function render() {
   // mês com % lançado mas sem aporte: card com valores zerados até o aporte ser lançado (aí entra nas contas)
   const pendentes = db.meses.filter(m => !temAporte(m)).map(m => ({ ...m, pendente: true }));
   const cardsSim = [...novos, ...pendentes].sort((a, b) => b.ym.localeCompare(a.ym));
-  $('lSim').innerHTML = cardsSim.map(l => `<div class="card" data-ym="${l.ym}">
+  $('sFiltro').hidden = !$('sTabela').checked;
+  // tabela: uma linha por mês, só as colunas escolhidas no filtro (saldo projetado e, embaixo, o % do mês)
+  const vis = SIM_COLS.filter(([k]) => simCols.has(k));
+  if ($('sTabela').checked) $('lSim').innerHTML = cardsSim.length ? `<div class="card rolagem"><table class="resumo">
+      <tr><th>Mês</th>${vis.map(([, nome]) => `<th>${nome} R$</th>`).join('')}</tr>${cardsSim.map(l => `<tr data-ym="${l.ym}"><td>${mesCurto(l.ym)}</td>${
+        vis.map(([k]) => { const saldo = l.pendente ? 0 : k === 'real' ? l.saldo : l.sim[k], p = l.pendente ? 0 : k === 'real' ? l.rent * 100 : l.pct?.[k];
+          return `<td><b>${ocultar ? '*****' : fmt(saldo)}</b><br>${pctCor(p)}</td>`; }).join('')}</tr>`).join('')}</table></div>`
+    : '<p class="mut">Nenhum mês ainda. Escolha o mês acima e lance os %.</p>';
+  else $('lSim').innerHTML = cardsSim.map(l => `<div class="card" data-ym="${l.ym}">
       <div class="row"><span class="tk">${mesTxt(l.ym)}</span>${l.pendente ? '<span class="mut">aguardando aporte</span>' : ''}</div>
       <div class="grid">${linha(`<b>${REAL}</b>`, `${pctCor(l.pendente ? 0 : l.rent * 100)} · <b>${ocultar ? OCULTO : brl(l.pendente ? 0 : l.saldo)}</b>`)}${MODS_SIM.map(([k, nome]) =>
         linha(nome, `${pctCor(l.pendente ? 0 : l.pct?.[k])} · ${ocultar ? OCULTO : brl(l.pendente ? 0 : l.sim[k])}`)).join('')}</div>
@@ -988,6 +1001,18 @@ try { $('pResumido').checked = localStorage.getItem('prev-jr-resumido') === '1';
 // Acumulada: caixa "ranking" (lembrada neste celular)
 try { $('aRanking').checked = localStorage.getItem('prev-jr-ranking') === '1'; } catch {}
 $('aRanking').onchange = e => { try { localStorage.setItem('prev-jr-ranking', e.target.checked ? '1' : ''); } catch {} render(); };
+// Simulação em tabela: escolha lembrada no celular; colunas do filtro (padrão: todas) voltam a "Todos" ao abrir o app
+try { $('sTabela').checked = localStorage.getItem('prev-jr-simtabela') === '1'; } catch {}
+$('sTabela').onchange = e => { try { localStorage.setItem('prev-jr-simtabela', e.target.checked ? '1' : ''); } catch {} render(); };
+$('sFiltro').innerHTML = [['todos', 'Todos'], ...SIM_COLS].map(([k, nome]) => `<label class="check"><input type="checkbox" data-col="${k}" checked> ${nome}</label>`).join('');
+$('sFiltro').onchange = e => {
+  const k = e.target.dataset.col;
+  if (k === 'todos') simCols = new Set(SIM_COLS.map(([c]) => c));            // "Todos" sempre volta a mostrar tudo
+  else if (e.target.checked) simCols.add(k);
+  else if (simCols.size > 1) simCols.delete(k);                                // pelo menos uma coluna fica marcada
+  $('sFiltro').querySelectorAll('input').forEach(i => { i.checked = i.dataset.col === 'todos' ? simCols.size === SIM_COLS.length : simCols.has(i.dataset.col); });
+  render();
+};
 $('pResumido').onchange = e => { try { localStorage.setItem('prev-jr-resumido', e.target.checked ? '1' : ''); } catch {} render(); };
 
 // --- explicações (botões "i" do topo), com os números atuais ---
@@ -1008,7 +1033,13 @@ document.addEventListener('click', e => {
     return `<p style="margin-bottom:2px"><b>${nome}</b></p><table>${tr('Saldo atual', brl(u?.partes[p].saldo ?? ini_p))}${
       tr(`Saldo de partida (${antDoInicio})`, brl(ini_p), 1)}${tr(`Contribuições de ${de} até hoje`, brl(somaP('aporte')), 1)}<tr><td><b>= Lucro</b></td><td><b>${brl(somaP('lucro'))}</b></td></tr></table>`;
   };
-  $('infoTxt').innerHTML = qual === 'saldoIni' ? `<h3>Saldo Inicial da Previdência Cargill</h3>
+  $('infoTxt').innerHTML = qual === 'apLanc' ? `<h3>Lançar mês</h3>
+    <p>O saldo é calculado sozinho (saldo anterior + % do mês + contribuição). Se o extrato mostrar outro valor, digite o do extrato.</p>`
+  : qual === 'apValores' ? `<h3>Valores lançados</h3>
+    <p>Mostra os meses lançados da Previdência Cargill: contribuição, % do mês e saldo do Participante e da Cargill.</p>
+    <p><b>Toque na linha para corrigir ou excluir</b>: o mês abre em "Editar" no quadro de cima. Altere e toque em <b>Salvar</b>, ou toque em <b>Excluir este lançamento</b> e confirme.</p>
+    <p>Use Mês inicial e Mês final para ver só um período; <b>Todos</b> volta a mostrar tudo.</p>`
+  : qual === 'saldoIni' ? `<h3>Saldo Inicial da Previdência Cargill</h3>
     <p>Vale <b>só para a Previdência Cargill</b>. Os investimentos da aba Financeiro não usam este campo: o valor que cada um já tinha é lançado lá mesmo, com o tipo <b>Valor inicial</b>.</p>
     <p>É o saldo da previdência <b>antes do primeiro mês lançado</b> na aba Aporte (hoje ${antDoInicio}), separado em Participante e Cargill.</p>
     <p>Para que serve:</p>
