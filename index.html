@@ -61,8 +61,10 @@ main { padding:12px 16px; max-width:640px; margin:0 auto; }
 #lSim .grid > div > :last-child { white-space:nowrap; } /* "% · saldo" numa linha; o rótulo é que quebra */
 label.check { display:flex; align-items:center; gap:8px; margin:0 0 8px; color:var(--tx); font-size:14px; }
 label.check input { width:auto; margin:0; }
-#sFiltro { display:flex; flex-wrap:wrap; gap:2px 14px; margin:0 0 8px; } #sFiltro label.check { margin:0; font-size:13px; }
-#lSim .resumo td, #lSim .resumo th { white-space:nowrap; padding-left:10px; }
+#sFiltroBox { margin:0 0 8px; }
+#lSim .resumo td, #lSim .resumo th { white-space:nowrap; padding-left:18px; } /* valor e % na mesma linha; a tabela rola para o lado */
+#lSim .resumo td:first-child, #lSim .resumo th:first-child { padding-left:6px; }
+#lSim .resumo .p { margin-left:8px; }
 /* senha: tela de bloqueio cobre tudo, inclusive o menu */
 /* janela de aviso (backup obrigatório, senha do backup ao restaurar) */
 #mdTexto { white-space:pre-line; } /* quebras de linha do texto da janela */
@@ -248,7 +250,7 @@ dialog table td:first-child { white-space:normal; }
     </div>
     <h2>Mês a mês <span class="mut">(% do mês · saldo projetado)</span></h2>
     <label class="check"><input type="checkbox" id="sTabela"> Ver em tabela (uma linha por mês)</label>
-    <div id="sFiltro" hidden></div>
+    <div id="sFiltroBox" hidden><label for="sFiltro">Mostrar (escolha uma ou mais)</label><select id="sFiltro" multiple></select></div>
     <div id="lSim" class="lista"></div>
   </section>
 
@@ -369,7 +371,7 @@ dialog table td:first-child { white-space:normal; }
       <div class="msg" id="cMsg"></div>
     </div>
     <!-- versão: MAIOR.MÉDIO.MENOR (ver CLAUDE.md); atualizar a cada publicação -->
-    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Financeiro JR · versão 1.9.0 · 26/10/2026</p>
+    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Financeiro JR · versão 1.9.1 · 26/10/2026</p>
   </section>
 </main>
 
@@ -423,7 +425,7 @@ dialog table td:first-child { white-space:normal; }
 </nav>
 
 <!-- "?v=" = versão do app: o celular baixa o calc.js novo junto com a tela nova (sem misturar com a cópia antiga do cache) -->
-<script src="calc.js?v=1.9.0"></script>
+<script src="calc.js?v=1.9.1"></script>
 <script>
 const KEY = 'prev-jr';
 const vazio = { saldoInicial: { part: 0, cgl: 0 }, meses: [], fin: [], ultimoBackup: null }; // fin = lançamentos da aba Financeiro
@@ -608,13 +610,15 @@ function render() {
   // mês com % lançado mas sem aporte: card com valores zerados até o aporte ser lançado (aí entra nas contas)
   const pendentes = db.meses.filter(m => !temAporte(m)).map(m => ({ ...m, pendente: true }));
   const cardsSim = [...novos, ...pendentes].sort((a, b) => b.ym.localeCompare(a.ym));
-  $('sFiltro').hidden = !$('sTabela').checked;
-  // tabela: uma linha por mês, só as colunas escolhidas no filtro (saldo projetado e, embaixo, o % do mês)
+  $('sFiltroBox').hidden = !$('sTabela').checked;
+  // tabela: uma linha por mês, só as colunas escolhidas (saldo projetado e % do mês na mesma linha); Soma só dos %
   const vis = SIM_COLS.filter(([k]) => simCols.has(k));
+  const pctDe = (l, k) => l.pendente ? 0 : k === 'real' ? l.rent * 100 : l.pct?.[k] ?? 0;
   if ($('sTabela').checked) $('lSim').innerHTML = cardsSim.length ? `<div class="card rolagem"><table class="resumo">
-      <tr><th>Mês</th>${vis.map(([, nome]) => `<th>${nome} R$</th>`).join('')}</tr>${cardsSim.map(l => `<tr data-ym="${l.ym}"><td>${mesCurto(l.ym)}</td>${
-        vis.map(([k]) => { const saldo = l.pendente ? 0 : k === 'real' ? l.saldo : l.sim[k], p = l.pendente ? 0 : k === 'real' ? l.rent * 100 : l.pct?.[k];
-          return `<td><b>${ocultar ? '*****' : fmt(saldo)}</b><br>${pctCor(p)}</td>`; }).join('')}</tr>`).join('')}</table></div>`
+      <tr><th>Mês</th>${vis.map(([, nome]) => `<th>${nome} R$ · %</th>`).join('')}</tr>${cardsSim.map(l => `<tr data-ym="${l.ym}"><td>${mesCurto(l.ym)}</td>${
+        vis.map(([k]) => { const saldo = l.pendente ? 0 : k === 'real' ? l.saldo : l.sim[k];
+          return `<td><b>${ocultar ? '*****' : fmt(saldo)}</b><span class="p">${pctCor(pctDe(l, k))}</span></td>`; }).join('')}</tr>`).join('')}
+      <tr class="soma"><td>Soma %</td>${vis.map(([k]) => `<td>${pctCor(cardsSim.reduce((t, l) => t + pctDe(l, k), 0))}</td>`).join('')}</tr></table></div>`
     : '<p class="mut">Nenhum mês ainda. Escolha o mês acima e lance os %.</p>';
   else $('lSim').innerHTML = cardsSim.map(l => `<div class="card" data-ym="${l.ym}">
       <div class="row"><span class="tk">${mesTxt(l.ym)}</span>${l.pendente ? '<span class="mut">aguardando aporte</span>' : ''}</div>
@@ -1004,13 +1008,14 @@ $('aRanking').onchange = e => { try { localStorage.setItem('prev-jr-ranking', e.
 // Simulação em tabela: escolha lembrada no celular; colunas do filtro (padrão: todas) voltam a "Todos" ao abrir o app
 try { $('sTabela').checked = localStorage.getItem('prev-jr-simtabela') === '1'; } catch {}
 $('sTabela').onchange = e => { try { localStorage.setItem('prev-jr-simtabela', e.target.checked ? '1' : ''); } catch {} render(); };
-$('sFiltro').innerHTML = [['todos', 'Todos'], ...SIM_COLS].map(([k, nome]) => `<label class="check"><input type="checkbox" data-col="${k}" checked> ${nome}</label>`).join('');
-$('sFiltro').onchange = e => {
-  const k = e.target.dataset.col;
-  if (k === 'todos') simCols = new Set(SIM_COLS.map(([c]) => c));            // "Todos" sempre volta a mostrar tudo
-  else if (e.target.checked) simCols.add(k);
-  else if (simCols.size > 1) simCols.delete(k);                                // pelo menos uma coluna fica marcada
-  $('sFiltro').querySelectorAll('input').forEach(i => { i.checked = i.dataset.col === 'todos' ? simCols.size === SIM_COLS.length : simCols.has(i.dataset.col); });
+$('sFiltro').innerHTML = [['todos', 'Todos'], ...SIM_COLS].map(([k, nome]) => `<option value="${k}"${k === 'todos' ? ' selected' : ''}>${nome}</option>`).join('');
+$('sFiltro').onchange = () => {
+  const sel = [...$('sFiltro').selectedOptions].map(o => o.value), cols = sel.filter(k => k !== 'todos');
+  const tinhaTodos = simCols.size === SIM_COLS.length;
+  // "Todos" (escolhido agora, ou nada escolhido) mostra tudo; escolher modalidades com "Todos" já marcado fica só com elas
+  simCols = new Set(!cols.length || sel.includes('todos') && !tinhaTodos ? SIM_COLS.map(([c]) => c) : cols);
+  const todas = simCols.size === SIM_COLS.length;
+  [...$('sFiltro').options].forEach(o => { o.selected = o.value === 'todos' ? todas : !todas && simCols.has(o.value); });
   render();
 };
 $('pResumido').onchange = e => { try { localStorage.setItem('prev-jr-resumido', e.target.checked ? '1' : ''); } catch {} render(); };
