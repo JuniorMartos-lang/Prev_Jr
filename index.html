@@ -159,6 +159,34 @@ h2 { font-size:15px; margin:18px 0 8px; color:var(--mut); font-weight:600; }
 .msg { font-size:13px; margin-top:8px; }
 .msg:empty { display:none; }
 [hidden] { display:none !important; }
+/* Ajustes: perfil no topo do menu, Editar perfil e senha */
+#ajPerfil { display:flex; flex-direction:column; align-items:center; gap:8px; padding:10px 0 16px; }
+#ajNome { font-size:18px; overflow-wrap:anywhere; text-align:center; }
+.avatar { display:inline-flex; align-items:center; justify-content:center; width:96px; height:96px; border-radius:50%; object-fit:cover; background:var(--pri); color:#fff; font-size:32px; font-weight:700; }
+:root[data-theme=dark] .avatar { color:#1e1b4b; }
+button.pSenha { display:flex; justify-content:space-between; align-items:center; width:100%; background:var(--card); color:var(--tx); border:1px solid var(--bd); border-radius:8px; padding:10px; font-weight:400; text-align:left; }
+button.pSenha span:last-child { color:var(--mut); font-size:22px; line-height:1; }
+.comOlho { position:relative; } .comOlho input { padding-right:46px; }
+button.vOlho { position:absolute; right:4px; top:50%; transform:translateY(-50%); width:40px; height:40px; padding:0; display:flex; align-items:center; justify-content:center; background:none; color:var(--mut); }
+button.vOlho[aria-pressed=true] { color:var(--pri); }
+.sAviso { display:flex; gap:8px; align-items:flex-start; margin:8px 0; padding:10px 12px; border-radius:10px; border:1px solid var(--bd); font-size:14px; }
+.sAvisoI { flex:none; width:20px; height:20px; border-radius:50%; background:var(--pri); color:#fff; display:flex; align-items:center; justify-content:center; font:italic 700 13px/1 Georgia, serif; }
+:root[data-theme=dark] .sAvisoI { color:#1e1b4b; }
+/* Ajustes em telas: menu → tela do grupo */
+#tab-config { overflow-x:clip; overflow-clip-margin:16px; }
+body.ajAba header, body.ajAba #topo, body.ajAba #topoFin, body.ajSub #lembrete { display:none; }
+body.ajAba main { padding-top:max(12px, env(safe-area-inset-top)); }
+button.ajItem { display:flex; justify-content:space-between; align-items:center; gap:10px; width:100%; min-height:50px; padding:12px 14px; background:none; color:var(--tx); border-bottom:1px solid var(--bd); border-radius:0; text-align:left; }
+button.ajItem:last-child { border-bottom:0; }
+button.ajItem span:last-child { color:var(--mut); font-size:22px; line-height:1; }
+.ajBarra { position:sticky; top:0; z-index:5; display:flex; align-items:center; gap:6px; padding:8px 0; margin-bottom:6px; background:var(--bg); }
+.ajBarra b { font-size:16px; }
+.ajBarra .olho { margin-left:auto; flex:none; }
+button.ajSeta { flex:none; width:40px; height:40px; padding:0; background:none; color:var(--tx); font-size:30px; line-height:1; }
+@media (prefers-reduced-motion: no-preference) {
+  .ajDeDir { animation:ajDeDir .25s ease-out; } .ajDeEsq { animation:ajDeEsq .25s ease-out; }
+  @keyframes ajDeDir { from { transform:translateX(100%); } } @keyframes ajDeEsq { from { transform:translateX(-100%); } }
+}
 /* botão "i" ao lado de um rótulo: abre a explicação do número */
 button.i { width:20px; height:20px; padding:0; border-radius:50%; background:transparent; color:var(--pri); border:1.5px solid currentColor;
   font:700 12px/1 Georgia, serif; font-style:italic; vertical-align:middle; margin-left:4px; flex:none; }
@@ -331,50 +359,84 @@ dialog table td:first-child { white-space:normal; }
   </section>
 
   <section id="tab-config" hidden>
-    <div class="card">
-      <b>Saldo Inicial da Previdência Cargill para Cadastro Inicial</b><button class="i" data-info="saldoIni" aria-label="O que é o saldo inicial">i</button>
-      <div class="two" id="cIni"></div>
-      <p class="mut">É a base do lucro do 1º mês e o ponto de partida das projeções.</p>
-      <button id="cSalvarIni">Salvar</button>
-      <div class="msg" id="cIniMsg"></div>
-    </div>
-    <div class="card">
-      <label for="cTema">Aparência</label>
-      <select id="cTema"><option value="auto">Automático (igual ao celular)</option><option value="claro">Claro</option><option value="escuro">Escuro</option></select>
-    </div>
-    <div class="card" id="senhaCard">
-      <b>Senha do app</b>
-      <p class="mut" id="sStatus"></p>
-      <div id="sAtualBox"><label for="sAtual">Senha atual</label><input id="sAtual" type="password" autocomplete="current-password"></div>
-      <label for="sNova">Nova senha (mínimo 8 caracteres)</label><input id="sNova" type="password" autocomplete="new-password">
-      <label for="sConf">Repita a nova senha</label><input id="sConf" type="password" autocomplete="new-password">
-      <label class="check"><input type="checkbox" class="verSenha"> Mostrar senha</label>
-      <div class="two" style="margin-top:10px">
-        <button id="sSalvarSenha">Criar senha</button>
-        <button id="sRemover" class="sec">Remover senha</button>
+    <div id="ajMenu">
+      <div id="ajPerfil">
+        <img id="ajFoto" class="avatar" alt="Foto do perfil" hidden><div id="ajIni" class="avatar" aria-hidden="true"></div>
+        <b id="ajNome"></b>
+        <button type="button" class="sec" data-aj="perfil">Editar perfil</button>
       </div>
-      <label class="check" id="sBioBox"><input type="checkbox" id="sBio"> Entrar com a digital / rosto do celular</label>
-      <div class="msg" id="sSenhaMsg"></div>
-      <div id="sCodigoBox" class="codigo" hidden>
-        <b>Seu código de recuperação</b>
-        <div id="sCodigo"></div>
-        <p class="mut">Anote ou tire foto e guarde fora do celular. Se esquecer a senha, é com ele que você cria outra. Ele só aparece agora.</p>
-        <button id="sCodigoOk" class="sec" style="width:100%">Já anotei</button>
+      <div class="card" style="padding:0; overflow:hidden">
+        <button type="button" class="ajItem" data-aj="saldo"><span>Saldo Inicial da Previdência Cargill para Cadastro Inicial</span><span aria-hidden="true">›</span></button>
+        <button type="button" class="ajItem" data-aj="senha"><span>Senha do app</span><span aria-hidden="true">›</span></button>
+        <button type="button" class="ajItem" data-aj="backup"><span>Backup</span><span aria-hidden="true">›</span></button>
+        <button type="button" class="ajItem" data-aj="aparencia"><span>Aparência</span><span aria-hidden="true">›</span></button>
+      </div>
+      <!-- versão: MAIOR.MÉDIO.MENOR (ver CLAUDE.md); atualizar a cada publicação -->
+      <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Financeiro JR · versão 1.10.0 · 31/10/2026</p>
+    </div>
+    <div class="ajTela" id="aj-saldo" hidden>
+      <div class="ajBarra"><button type="button" class="ajSeta" aria-label="Voltar">‹</button><b>Saldo Inicial da Previdência Cargill para Cadastro Inicial</b><button class="i" data-info="saldoIni" aria-label="O que é o saldo inicial">i</button><button type="button" id="cOlho" class="olho" aria-label="Mostrar valores"></button></div>
+      <div class="card">
+        <div class="two" id="cIni"></div>
+        <p class="mut">É a base do lucro do 1º mês e o ponto de partida das projeções.</p>
+        <button id="cSalvarIni">Salvar</button>
+        <div class="msg" id="cIniMsg"></div>
       </div>
     </div>
-    <div class="card">
-      <b>Backup</b><button class="i" data-info="backup" aria-label="Como funciona o backup">i</button>
-      <p class="mut">Os dados ficam neste celular. Toque em Salvar backup e escolha o OneDrive (e a pasta) na tela de compartilhar. Para restaurar, toque em Restaurar e escolha o arquivo.</p>
-      <p id="ultBackup"></p>
-      <div class="two">
-        <button id="btnExp">Salvar backup</button>
-        <button id="btnImp" class="sec">Restaurar</button>
+    <div class="ajTela" id="aj-aparencia" hidden>
+      <div class="ajBarra"><button type="button" class="ajSeta" aria-label="Voltar">‹</button><b>Aparência</b></div>
+      <div class="card">
+        <label for="cTema">Aparência</label>
+        <select id="cTema"><option value="auto">Automático (igual ao celular)</option><option value="claro">Claro</option><option value="escuro">Escuro</option></select>
       </div>
-      <input type="file" id="fileImp" accept=".txt,.json,text/plain,application/json" hidden>
-      <div class="msg" id="cMsg"></div>
     </div>
-    <!-- versão: MAIOR.MÉDIO.MENOR (ver CLAUDE.md); atualizar a cada publicação -->
-    <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Financeiro JR · versão 1.9.2 · 26/10/2026</p>
+    <div class="ajTela" id="aj-perfil" hidden>
+      <div class="ajBarra"><button type="button" class="ajSeta" aria-label="Voltar">‹</button><b>Editar perfil</b></div>
+      <div class="card">
+        <div style="text-align:center">
+          <img id="pFoto" class="avatar" alt="Foto do perfil" hidden><div id="pIni" class="avatar" aria-hidden="true"></div>
+        </div>
+        <div class="two" style="margin-top:10px">
+          <button type="button" id="pFotoEsc" class="sec">Alterar foto</button>
+          <button type="button" id="pFotoRem" class="sec">Remover foto</button>
+        </div>
+        <input type="file" id="pFotoArq" accept="image/*" hidden>
+        <label for="pNome">Nome</label><input id="pNome" autocomplete="name" maxlength="60">
+        <label for="pEmail">E-mail (só informativo; o app não envia e-mails)</label><input id="pEmail" type="email" inputmode="email" autocomplete="email">
+        <label>Senha</label>
+        <button type="button" class="pSenha" data-aj="senha"><span id="pSenhaTxt"></span><span aria-hidden="true">›</span></button>
+        <label for="pNasc">Data de nascimento</label><input id="pNasc" type="date">
+        <button type="button" id="pSalvar" style="width:100%; margin-top:14px">Salvar alterações</button>
+      </div>
+    </div>
+    <div class="ajTela" id="aj-senha" hidden>
+      <div class="ajBarra"><button type="button" class="ajSeta" aria-label="Voltar">‹</button><b id="sTitulo"></b></div>
+      <div class="card" id="senhaCard">
+        <p class="mut" id="sStatus"></p>
+        <p class="sAviso"><span class="sAvisoI" aria-hidden="true">i</span>Para uma senha mais forte, use números e caracteres especiais (ex.: ! @ # $ %).</p>
+        <div id="sAtualBox"><label for="sAtual">Senha atual</label><div class="comOlho"><input id="sAtual" type="password" autocomplete="current-password"><button type="button" class="vOlho" aria-pressed="false" aria-label="Mostrar senha"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div></div>
+        <label for="sNova">Nova senha (mínimo 8 caracteres)</label><div class="comOlho"><input id="sNova" type="password" autocomplete="new-password"><button type="button" class="vOlho" aria-pressed="false" aria-label="Mostrar senha"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+        <label for="sConf">Repetir a nova senha</label><div class="comOlho"><input id="sConf" type="password" autocomplete="new-password"><button type="button" class="vOlho" aria-pressed="false" aria-label="Mostrar senha"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+        <button type="button" id="sSalvarSenha" style="width:100%; margin-top:14px">Salvar alterações</button>
+        <div class="msg" id="sSenhaMsg"></div>
+        <label class="check" id="sBioBox" style="margin-top:12px"><input type="checkbox" id="sBio"> Entrar com a digital / rosto do celular</label>
+        <p class="mut" id="sBioAviso" style="margin:4px 0 0"></p>
+        <button type="button" id="sRemover" class="sec" style="width:100%; margin-top:12px">Remover senha</button>
+      </div>
+    </div>
+    <div class="ajTela" id="aj-backup" hidden>
+      <div class="ajBarra"><button type="button" class="ajSeta" aria-label="Voltar">‹</button><b>Backup</b><button class="i" data-info="backup" aria-label="Como funciona o backup">i</button></div>
+      <div class="card">
+        <p class="mut">Os dados ficam neste celular. Toque em Salvar backup e escolha o OneDrive (e a pasta) na tela de compartilhar. Para restaurar, toque em Restaurar e escolha o arquivo.</p>
+        <p id="ultBackup"></p>
+        <div class="two">
+          <button id="btnExp">Salvar backup</button>
+          <button id="btnImp" class="sec">Restaurar</button>
+        </div>
+        <input type="file" id="fileImp" accept=".txt,.json,text/plain,application/json" hidden>
+        <div class="msg" id="cMsg"></div>
+      </div>
+    </div>
   </section>
 </main>
 
@@ -389,6 +451,16 @@ dialog table td:first-child { white-space:normal; }
     </div>
     <div class="msg dn" id="mdMsg"></div>
     <div class="botoes"><button id="mdOk"></button><button type="button" class="sec" id="mdCancelar"></button></div>
+  </div>
+</div>
+
+<!-- código de recuperação: mostrado uma vez, ao criar a senha; a janela não deixa sair da tela sem anotar -->
+<div id="sCodigoBox" class="modal" hidden>
+  <div class="card codigo" style="width:100%; max-width:360px; background:var(--card)">
+    <b>Seu código de recuperação</b>
+    <div id="sCodigo"></div>
+    <p class="mut">Anote ou tire foto e guarde fora do celular. Se esquecer a senha, é com ele que você cria outra. Ele só aparece agora.</p>
+    <button id="sCodigoOk" class="sec" style="width:100%">Já anotei</button>
   </div>
 </div>
 
@@ -428,7 +500,7 @@ dialog table td:first-child { white-space:normal; }
 </nav>
 
 <!-- "?v=" = versão do app: o celular baixa o calc.js novo junto com a tela nova (sem misturar com a cópia antiga do cache) -->
-<script src="calc.js?v=1.9.2"></script>
+<script src="calc.js?v=1.10.0"></script>
 <script>
 const KEY = 'prev-jr';
 const vazio = { saldoInicial: { part: 0, cgl: 0 }, meses: [], fin: [], ultimoBackup: null }; // fin = lançamentos da aba Financeiro
@@ -554,6 +626,7 @@ function render() {
   $('hPos').textContent = esconde(brl(u ? u.saldo : iniTotal));
   $('hOlho').innerHTML = ocultar ? OLHO_FECHADO : OLHO_ABERTO;
   $('hOlho').setAttribute('aria-label', ocultar ? 'Mostrar valores' : 'Esconder valores');
+  $('cOlho').innerHTML = $('hOlho').innerHTML; $('cOlho').setAttribute('aria-label', $('hOlho').getAttribute('aria-label'));
   $('hPct').className = 'pill ' + cor(u?.acum ?? 0);
   // o acumulado soma os % a partir do 1º mês lançado (o saldo do mês anterior a ele é só o ponto de partida)
   const desde = L.length ? ' desde ' + mesNome(L[0].ym) : '';
@@ -839,7 +912,7 @@ $('acExp').onclick = () => {
     `prev-jr-acumulada_${nome}.csv`, 'Prev Jr - rentabilidade acumulada');
 };
 
-$('hOlho').onclick = () => { ocultar = !ocultar; $('cIniMsg').textContent = ''; render(); };
+$('hOlho').onclick = $('cOlho').onclick = () => { ocultar = !ocultar; $('cIniMsg').textContent = ''; render(); };
 
 // --- Aba Financeiro ---
 // Previdência entra sozinha (dos lançamentos da aba Aporte); os outros investimentos vêm do cadastro (db.fin).
@@ -1096,7 +1169,7 @@ document.addEventListener('click', e => {
     <p>A Previdência Cargill entra sozinha, a partir da aba Aporte.</p>
     <p><b>Como excluir um lançamento</b>: toque na linha → ela abre em "Editar lançamento" → toque em <b>Excluir este lançamento</b> → confirme. Aparece "Excluído com Sucesso". (Linhas da Previdência Cargill se corrigem na aba Aporte.)</p>`
   : qual === 'backup' ? `<b>Sobre o backup</b>
-    <p>O backup é uma cópia de todos os dados do aplicativo (meses lançados com contribuições, % e saldos de Participante e Cargill, os % da Simulação, o saldo inicial e os investimentos da aba Financeiro), gravada em um arquivo de texto (.txt). Não são incluídos a senha do aplicativo, a configuração de aparência e as preferências de tela (Resumido e Ordenar por Ranking).</p>
+    <p>O backup é uma cópia de todos os dados do aplicativo (meses lançados com contribuições, % e saldos de Participante e Cargill, os % da Simulação, o saldo inicial, os investimentos da aba Financeiro e o nome, e-mail e nascimento do perfil), gravada em um arquivo de texto (.txt). Não são incluídos a senha do aplicativo, a foto do perfil, a configuração de aparência e as preferências de tela (Resumido e Ordenar por Ranking).</p>
     <b>Como salvar</b>
     <ol>
       <li>Toque em <b>Salvar backup</b>.</li>
@@ -1166,7 +1239,45 @@ function salvoOk(txt = 'Dados Salvos com Sucesso', det = '') {
 $('info').onclick = e => { if (e.target === $('info')) $('info').close(); }; // toque fora da caixa fecha
 
 // --- menu ---
+// Ajustes: menu → tela do grupo. Cada tela é uma entrada do histórico, para o voltar do Android fazer o caminho da seta
+let ajNivel = 0, ajScrolls = []; // nível da tela (0 = menu) e rolagem guardada de cada nível
+history.scrollRestoration = 'manual';
+if (history.state?.aj) history.replaceState(null, ''); // recarregou dentro de uma tela: o app abre na Posição
+function ajMostra(id, anim) {
+  if (!$('aj-senha').hidden && id !== 'senha') limpaSenhaTela();
+  document.body.classList.toggle('ajSub', !!id);
+  $('ajMenu').hidden = !!id;
+  document.querySelectorAll('.ajTela').forEach(x => x.hidden = x.id !== 'aj-' + id);
+  const el = id ? $('aj-' + id) : $('ajMenu');
+  el.classList.remove('ajDeDir', 'ajDeEsq');
+  if (anim) { void el.offsetWidth; el.classList.add(anim); } // offsetWidth: reinicia a animação
+}
+$('tab-config').addEventListener('click', e => {
+  const id = e.target.closest('[data-aj]')?.dataset.aj; if (!id) return;
+  ajScrolls[ajNivel] = scrollY;
+  if (id === 'perfil') perfilCarrega();
+  history.pushState({ aj: id, n: ++ajNivel }, '');
+  ajMostra(id, 'ajDeDir');
+  scrollTo(0, 0);
+});
+document.querySelectorAll('.ajSeta').forEach(b => b.onclick = () => history.back());
+addEventListener('popstate', () => {
+  const id = history.state?.aj, n = history.state?.n || 0, volta = n < ajNivel, antes = ajNivel;
+  // voltar do Android com uma janela aberta: não troca a tela por baixo dela (a caixa dos "i" só fecha)
+  if (ajNivel && !$('tab-config').hidden && ($('info').open || !$('modal').hidden || !$('sCodigoBox').hidden || !$('trava').hidden)) {
+    history.pushState({ aj: document.querySelector('.ajTela:not([hidden])')?.id.slice(3), n: ajNivel }, '');
+    if ($('info').open) $('info').close();
+    return;
+  }
+  ajNivel = n;
+  if ($('tab-config').hidden) return; // veio da troca de aba: já está no menu
+  if (id === 'perfil' && antes === 0) perfilCarrega(); // avançar do menu não recupera o que foi descartado
+  ajMostra(id, volta ? 'ajDeEsq' : 'ajDeDir');
+  scrollTo(0, volta ? ajScrolls[n] || 0 : 0);
+});
 function abrirAba(t) {
+  ajMostra(); ajScrolls = []; if (history.state?.n) history.go(-history.state.n); // sair de Ajustes (ou tocar nela de novo) volta ao menu
+  document.body.classList.toggle('ajAba', t === 'config');
   document.querySelectorAll('nav button').forEach(x => x.classList.toggle('on', x.dataset.tab === t));
   document.querySelectorAll('main section').forEach(s => s.hidden = s.id !== 'tab-' + t);
   abaAtual = t; $('topo').hidden = t === 'fin'; $('topoFin').hidden = t !== 'fin';
@@ -1188,6 +1299,53 @@ $('cSalvarIni').onclick = () => {
 };
 try { $('cTema').value = localStorage.getItem('prev-jr-tema') || 'auto'; } catch {}
 $('cTema').onchange = e => { localStorage.setItem('prev-jr-tema', e.target.value); aplicarTema(); };
+// Perfil: nome, e-mail e nascimento em db.perfil (vão no backup); foto reduzida (160 px, JPEG) na chave prev-jr-foto, fora do backup
+const KEY_FOTO = 'prev-jr-foto';
+const iniciais = n => { const p = (n || '').trim().split(/\s+/).filter(Boolean); return p.length ? (p[0][0] + (p.length > 1 ? p[p.length - 1][0] : '')).toUpperCase() : '?'; };
+function desenhaAvatar(img, ini, foto, nome) {
+  img.hidden = !foto; ini.hidden = !!foto; ini.textContent = iniciais(nome);
+  if (foto) img.src = foto; else img.removeAttribute('src');
+}
+function mostrarPerfil() {
+  let f = null; try { f = localStorage.getItem(KEY_FOTO); } catch {}
+  const nome = db.perfil?.nome || '';
+  desenhaAvatar($('ajFoto'), $('ajIni'), f, nome); $('ajNome').textContent = nome || 'Seu nome';
+}
+// Editar perfil: tudo fica na tela (foto em pFotoNova) até "Salvar alterações"; ao entrar pelo menu, recarrega o que está gravado
+let pFotoNova = null;
+function pDesenhaFoto() { desenhaAvatar($('pFoto'), $('pIni'), pFotoNova, $('pNome').value); $('pFotoRem').disabled = !pFotoNova; }
+function perfilCarrega() {
+  const f = db.perfil || {};
+  $('pNome').value = f.nome || ''; $('pEmail').value = f.email || ''; $('pNasc').value = f.nasc || ''; $('pNasc').max = hoje();
+  try { pFotoNova = localStorage.getItem(KEY_FOTO); } catch { pFotoNova = null; }
+  pDesenhaFoto();
+}
+const avisoPerfil = async (titulo, texto) => { await modal({ titulo, ok: 'OK', texto }); fecharModal(); };
+$('pNome').oninput = pDesenhaFoto;
+$('pFotoEsc').onclick = () => $('pFotoArq').click();
+$('pFotoArq').onchange = async e => {
+  const arq = e.target.files[0]; e.target.value = ''; if (!arq) return;
+  try {
+    const img = await createImageBitmap(arq);
+    const lado = Math.min(img.width, img.height), c = document.createElement('canvas');
+    c.width = c.height = 160; // recorta o centro em quadrado
+    c.getContext('2d').drawImage(img, (img.width - lado) / 2, (img.height - lado) / 2, lado, lado, 0, 0, 160, 160);
+    pFotoNova = c.toDataURL('image/jpeg', 0.85); pDesenhaFoto();
+  } catch (err) { avisoPerfil('Não foi possível usar essa imagem', err.message); }
+};
+$('pFotoRem').onclick = () => { pFotoNova = null; pDesenhaFoto(); };
+const emailOk = v => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+$('pSalvar').onclick = async () => {
+  const email = $('pEmail').value.trim(), nasc = $('pNasc').value;
+  const erro = !emailOk(email) ? 'Digite um e-mail válido (ex.: nome@exemplo.com) ou deixe o campo vazio.'
+    : $('pNasc').validity.badInput ? 'A data de nascimento está incompleta.' : nasc > hoje() ? 'A data de nascimento não pode ser no futuro.' : '';
+  if (erro) return avisoPerfil('Valor inválido', erro);
+  try { if (pFotoNova) localStorage.setItem(KEY_FOTO, pFotoNova); else localStorage.removeItem(KEY_FOTO); }
+  catch (err) { return avisoPerfil('Não foi possível gravar a foto', err.message); }
+  db.perfil = { nome: $('pNome').value.trim(), email, nasc }; salvar(); mostrarPerfil();
+  salvoOk(); $('info').addEventListener('close', () => history.back(), { once: true }); // volta ao menu depois de fechar o aviso
+};
+mostrarPerfil();
 // Backup: com senha no app, o arquivo vai cifrado com a chave tirada da senha (trava.backup); sem senha, vai legível como antes
 async function fazerBackup() {
   let txt = JSON.stringify(db, null, 1);
@@ -1222,8 +1380,8 @@ $('fileImp').onchange = async e => {
         texto: 'Isso substitui todos os dados atuais deste celular pelos dados do backup. Continuar?' });
       fecharModal(); if (!ok) return;
     }
-    db = { ...vazio, ...d };
-    salvar(); render(); limparForm(); limparFin();
+    db = { ...vazio, ...d, perfil: d.perfil ?? db.perfil }; // backup antigo, sem perfil, mantém o deste aparelho
+    salvar(); render(); limparForm(); limparFin(); mostrarPerfil();
     $('cMsg').textContent = '';
     const nFin = d.fin?.length || 0;
     salvoOk('Backup Restaurado com Sucesso', `${d.meses.length} meses da Previdência Cargill e ${nFin} ${nFin === 1 ? 'lançamento' : 'lançamentos'} de investimentos.`);
@@ -1286,10 +1444,20 @@ document.addEventListener('change', e => {
 function renderSenha() {
   $('sStatus').textContent = temSenha() ? 'O app pede senha ao abrir.' : 'Sem senha: o app abre direto.';
   $('sAtualBox').hidden = $('sRemover').hidden = !temSenha();
-  $('sSalvarSenha').textContent = temSenha() ? 'Trocar senha' : 'Criar senha';
-  $('sBioBox').hidden = !temSenha() || !bioDisponivel;
+  $('sTitulo').textContent = temSenha() ? 'Alterar senha' : 'Criar senha';
+  $('pSenhaTxt').textContent = temSenha() ? '••••••••' : 'Criar senha';
+  $('sBioBox').hidden = !bioDisponivel;
+  $('sBio').disabled = !temSenha();
+  $('sBioAviso').textContent = bioDisponivel && !temSenha() ? 'Crie uma senha para poder usar a digital ou o rosto.' : '';
   $('sBio').checked = !!trava.bio;
 }
+function olhosFechados() { document.querySelectorAll('.vOlho').forEach(b => { b.setAttribute('aria-pressed', 'false'); b.setAttribute('aria-label', 'Mostrar senha'); b.previousElementSibling.type = 'password'; }); }
+function limpaSenhaTela() { limpaCampos('sAtual', 'sNova', 'sConf'); olhosFechados(); $('sSenhaMsg').textContent = ''; }
+document.querySelectorAll('.vOlho').forEach(b => b.onclick = () => {
+  const ver = b.previousElementSibling.type === 'password';
+  b.previousElementSibling.type = ver ? 'text' : 'password';
+  b.setAttribute('aria-pressed', ver); b.setAttribute('aria-label', ver ? 'Esconder senha' : 'Mostrar senha');
+});
 const msgSenha = (txt, ok) => { $('sSenhaMsg').className = 'msg ' + (ok ? 'up' : 'dn'); $('sSenhaMsg').textContent = txt; };
 const limpaCampos = (...ids) => ids.forEach(id => $(id).value = '');
 
