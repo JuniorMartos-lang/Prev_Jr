@@ -179,9 +179,13 @@ body.ajAba main { padding-top:max(12px, env(safe-area-inset-top)); }
 button.ajItem { display:flex; justify-content:space-between; align-items:center; gap:10px; width:100%; min-height:50px; padding:12px 14px; background:none; color:var(--tx); border-bottom:1px solid var(--bd); border-radius:0; text-align:left; }
 button.ajItem:last-child { border-bottom:0; }
 button.ajItem span:last-child { color:var(--mut); font-size:22px; line-height:1; }
-.ajBarra { position:sticky; top:0; z-index:5; display:flex; align-items:center; gap:6px; padding:8px 0; margin-bottom:6px; background:var(--bg); }
-.ajBarra b { font-size:16px; }
-.ajBarra .olho { margin-left:auto; flex:none; }
+.ajBarra { position:sticky; top:0; z-index:5; display:grid; grid-template-columns:minmax(44px, 1fr) minmax(0, max-content) minmax(44px, 1fr); align-items:center; gap:6px; padding:8px 0; margin-bottom:6px; background:var(--bg); }
+.ajBarra b { grid-column:2; font-size:16px; text-align:center; overflow-wrap:anywhere; }
+.ajBarra .olho { grid-column:3; justify-self:end; }
+/* descrição sempre visível, logo abaixo do título */
+.ajDesc { display:flex; gap:8px; align-items:flex-start; margin:0 0 10px; font-size:14px; color:var(--mut); }
+.ajDesc button.i, .iFixo { flex:none; width:20px; height:20px; margin:0; }
+.iFixo { display:inline-flex; align-items:center; justify-content:center; border-radius:50%; color:var(--pri); border:1.5px solid currentColor; font:italic 700 12px/1 Georgia, serif; }
 button.ajSeta { flex:none; width:40px; height:40px; padding:0; background:none; color:var(--tx); font-size:30px; line-height:1; }
 @media (prefers-reduced-motion: no-preference) {
   .ajDeDir { animation:ajDeDir .25s ease-out; } .ajDeEsq { animation:ajDeEsq .25s ease-out; }
@@ -372,19 +376,20 @@ dialog table td:first-child { white-space:normal; }
         <button type="button" class="ajItem" data-aj="aparencia"><span>Aparência</span><span aria-hidden="true">›</span></button>
       </div>
       <!-- versão: MAIOR.MÉDIO.MENOR (ver CLAUDE.md); atualizar a cada publicação -->
-      <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Financeiro JR · versão 1.10.0 · 31/10/2026</p>
+      <p class="mut" style="text-align:center; font-size:12px; margin-top:24px">Financeiro JR · versão 1.11.0 · 31/10/2026</p>
     </div>
     <div class="ajTela" id="aj-saldo" hidden>
-      <div class="ajBarra"><button type="button" class="ajSeta" aria-label="Voltar">‹</button><b>Saldo Inicial da Previdência Cargill para Cadastro Inicial</b><button class="i" data-info="saldoIni" aria-label="O que é o saldo inicial">i</button><button type="button" id="cOlho" class="olho" aria-label="Mostrar valores"></button></div>
+      <div class="ajBarra"><button type="button" class="ajSeta" aria-label="Voltar">‹</button><b>Saldo Inicial da Previdência Cargill para Cadastro Inicial</b><button type="button" id="cOlho" class="olho" aria-label="Mostrar valores"></button></div>
+      <p class="ajDesc"><button class="i" data-info="saldoIni" aria-label="O que é o saldo inicial">i</button><span>Vale só para a Previdência Cargill: é o saldo do Participante e da Cargill antes do primeiro mês lançado na aba Aporte. É a base do lucro do 1º mês e o ponto de partida das projeções da Simulação, então mudar aqui muda esses números. Os investimentos da aba Financeiro não usam este campo. Com o olho fechado, o valor fica escondido e não dá para editar. Toque no "i" para mais detalhes.</span></p>
       <div class="card">
         <div class="two" id="cIni"></div>
-        <p class="mut">É a base do lucro do 1º mês e o ponto de partida das projeções.</p>
         <button id="cSalvarIni">Salvar</button>
         <div class="msg" id="cIniMsg"></div>
       </div>
     </div>
     <div class="ajTela" id="aj-aparencia" hidden>
       <div class="ajBarra"><button type="button" class="ajSeta" aria-label="Voltar">‹</button><b>Aparência</b></div>
+      <p class="ajDesc"><span class="iFixo" aria-hidden="true">i</span><span>Escolhe as cores do app: Claro, Escuro ou Automático, que acompanha o ajuste do celular. A mudança vale na hora, em todas as abas, e não altera nenhum valor. A escolha fica só neste celular e não vai no backup: ao restaurar em outro aparelho, é preciso escolher de novo.</span></p>
       <div class="card">
         <label for="cTema">Aparência</label>
         <select id="cTema"><option value="auto">Automático (igual ao celular)</option><option value="claro">Claro</option><option value="escuro">Escuro</option></select>
@@ -392,6 +397,7 @@ dialog table td:first-child { white-space:normal; }
     </div>
     <div class="ajTela" id="aj-perfil" hidden>
       <div class="ajBarra"><button type="button" class="ajSeta" aria-label="Voltar">‹</button><b>Editar perfil</b></div>
+      <p class="ajDesc"><span class="iFixo" aria-hidden="true">i</span><span>Seu nome e sua foto aparecem no topo de Ajustes. O e-mail e o nascimento ficam só guardados: o app não envia e-mails. O nome do cabeçalho das outras abas não muda. Nada vale até tocar em Salvar alterações; sair sem salvar descarta. Nome, e-mail e nascimento vão no backup; a foto fica só neste celular.</span></p>
       <div class="card">
         <div style="text-align:center">
           <img id="pFoto" class="avatar" alt="Foto do perfil" hidden><div id="pIni" class="avatar" aria-hidden="true"></div>
@@ -411,6 +417,7 @@ dialog table td:first-child { white-space:normal; }
     </div>
     <div class="ajTela" id="aj-senha" hidden>
       <div class="ajBarra"><button type="button" class="ajSeta" aria-label="Voltar">‹</button><b id="sTitulo"></b></div>
+      <p class="ajDesc"><span class="iFixo" aria-hidden="true">i</span><span>Com senha, o app pede a senha ao abrir e ao voltar depois de 1 minuto fora dele. Ao criar a senha, aparece uma única vez o código de recuperação, usado se você esquecer; anote fora do celular. Com senha, os backups ficam protegidos por ela, e criar ou trocar pede um backup novo. A senha não vai no backup. É uma trava de tela: os dados no celular não ficam criptografados.</span></p>
       <div class="card" id="senhaCard">
         <p class="mut" id="sStatus"></p>
         <p class="sAviso"><span class="sAvisoI" aria-hidden="true">i</span>Para uma senha mais forte, use números e caracteres especiais (ex.: ! @ # $ %).</p>
@@ -425,9 +432,9 @@ dialog table td:first-child { white-space:normal; }
       </div>
     </div>
     <div class="ajTela" id="aj-backup" hidden>
-      <div class="ajBarra"><button type="button" class="ajSeta" aria-label="Voltar">‹</button><b>Backup</b><button class="i" data-info="backup" aria-label="Como funciona o backup">i</button></div>
+      <div class="ajBarra"><button type="button" class="ajSeta" aria-label="Voltar">‹</button><b>Backup</b></div>
+      <p class="ajDesc"><button class="i" data-info="backup" aria-label="Como funciona o backup">i</button><span>Os dados ficam só neste celular e o backup é manual: o app só lembra depois de 7 dias sem backup. Toque em Salvar backup e escolha o OneDrive (e a pasta) na tela de compartilhar. Para restaurar, toque em Restaurar e escolha o arquivo: ele substitui todos os dados deste celular. Sem senha no app, o arquivo pode ser lido por quem tiver acesso a ele. Toque no "i" para mais detalhes.</span></p>
       <div class="card">
-        <p class="mut">Os dados ficam neste celular. Toque em Salvar backup e escolha o OneDrive (e a pasta) na tela de compartilhar. Para restaurar, toque em Restaurar e escolha o arquivo.</p>
         <p id="ultBackup"></p>
         <div class="two">
           <button id="btnExp">Salvar backup</button>
@@ -500,7 +507,7 @@ dialog table td:first-child { white-space:normal; }
 </nav>
 
 <!-- "?v=" = versão do app: o celular baixa o calc.js novo junto com a tela nova (sem misturar com a cópia antiga do cache) -->
-<script src="calc.js?v=1.10.0"></script>
+<script src="calc.js?v=1.11.0"></script>
 <script>
 const KEY = 'prev-jr';
 const vazio = { saldoInicial: { part: 0, cgl: 0 }, meses: [], fin: [], ultimoBackup: null }; // fin = lançamentos da aba Financeiro
