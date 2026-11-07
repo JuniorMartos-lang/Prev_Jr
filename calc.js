@@ -84,9 +84,9 @@ function financeiro(lancs) {
 const b64 = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 8192) s += String.fromCharCode(...u8.subarray(i, i + 8192)); return btoa(s); }; // em pedaços: o backup cifrado pode ser grande
 const deB64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
 const aleatorio = n => crypto.getRandomValues(new Uint8Array(n));
-async function hashSenha(senha, sal) {
+async function hashSenha(senha, sal, iteracoes = 150000) {
   const chave = await crypto.subtle.importKey('raw', new TextEncoder().encode(senha), 'PBKDF2', false, ['deriveBits']);
-  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: deB64(sal), iterations: 150000 }, chave, 256);
+  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: deB64(sal), iterations: iteracoes }, chave, 256);
   return b64(new Uint8Array(bits));
 }
 // cria {sal, hash} para guardar
@@ -111,5 +111,53 @@ async function decifrar({ iv, dados }, chave) { // chave errada → erro (o AES-
   return new TextDecoder().decode(t);
 }
 
+// --- Sincronização com o Google Drive ---
+// A chave sai da senha do app com um sal fixo guardado no próprio arquivo de dados, então é a mesma em todos os
+// aparelhos. O arquivo tem o formato do backup protegido, com "iteracoes", e por isso também abre pelo Restaurar comum.
+const ITERACOES_SYNC = 600000;
+const chaveSync = (senha, sal) => hashSenha(senha, sal, ITERACOES_SYNC);
+const novoSal = () => b64(aleatorio(16));
+async function cifrarComChave(dados, chave, sal) {
+  return { prevJrProtegido: 1, sal, iteracoes: ITERACOES_SYNC, ...await cifrar(JSON.stringify(dados), chave) };
+}
+async function decifrarComChave(o, chave) {
+  if (!o?.prevJrProtegido || o.iteracoes !== ITERACOES_SYNC) throw new Error('formato');
+  return JSON.parse(await decifrar(o, chave));
+}
+// JSON com as chaves em ordem: a mesma informação dá sempre o mesmo texto, venha de onde vier
+const canonico = v => JSON.stringify(v, (k, x) => x && typeof x === 'object' && !Array.isArray(x)
+  ? Object.fromEntries(Object.keys(x).sort().map(c => [c, x[c]])) : x);
+// assinatura curta (FNV-1a), para saber se os dados mudaram desde o último envio ou recebimento
+function assinatura(texto) { let h = 2166136261; for (let i = 0; i < texto.length; i++) { h ^= texto.charCodeAt(i); h = Math.imul(h, 16777619); } return texto.length + ':' + (h >>> 0).toString(36); }
+// Compara um backup (antigo) com os dados atuais: quantos itens do backup faltam nos atuais e quantos existem nos dois
+// com conteúdo diferente. Meses da previdência pelo mês (ym, com os % da Simulação); lançamentos do Financeiro pelo id;
+// o saldo inicial conta como 1 item. Perfil, datas de backup e dados do Google ficam de fora.
+function compararDados(antigo, atual) {
+  let faltam = 0, diferentes = 0;
+  for (const [lista, chave] of [['meses', m => m.ym], ['fin', l => l.id]]) {
+    const agora = new Map((atual?.[lista] || []).map(x => [chave(x), canonico(x)]));
+    for (const x of antigo?.[lista] || []) {
+      if (!agora.has(chave(x))) faltam++;
+      else if (agora.get(chave(x)) !== canonico(x)) diferentes++;
+    }
+  }
+  const ini = d => canonico({ part: d?.saldoInicial?.part || 0, cgl: d?.saldoInicial?.cgl || 0 });
+  if (ini(antigo) !== ini(atual)) diferentes++;
+  return { faltam, diferentes };
+}
+const ehClienteGoogle = v => typeof v === 'string' && v.length <= 200 && /^[\w-]+\.apps\.googleusercontent\.com$/.test(v);
+// db.google: ID do cliente do projeto no Google (vazio usa o do código) e data do último backup automático
+const googleValido = g => g === undefined || (!!g && typeof g === 'object' && !Array.isArray(g)
+  && (g.cliente === undefined || ehClienteGoogle(g.cliente))
+  && (g.ultimoAutoEm === undefined || (typeof g.ultimoAutoEm === 'string' && g.ultimoAutoEm.length <= 40 && !isNaN(Date.parse(g.ultimoAutoEm)))));
+// Barreira do Restaurar e do que chega do Drive: fora deste formato, nada substitui os dados.
+const parteOk = x => x == null || (isFinite(x.saldo) && isFinite(x.aporte) && (x.taxa == null || isFinite(x.taxa)));
+const backupValido = d => !!d && typeof d === 'object' && PARTES.every(([p]) => isFinite(d.saldoInicial?.[p])) && Array.isArray(d.meses)
+  && d.meses.every(m => /^\d{4}-\d{2}$/.test(m.ym) && PARTES.every(([p]) => parteOk(m[p])) && Object.values(m.pct || {}).every(isFinite))
+  && (d.fin == null || (Array.isArray(d.fin) && d.fin.every(l => /^\d{4}-\d{2}-\d{2}$/.test(l.data) && typeof l.inv === 'string' && l.inv
+    && ['aporte', 'saque', 'inicial'].includes(l.tipo) && isFinite(l.valor) && isFinite(l.pct))))
+  && googleValido(d.google);
+
 if (typeof module !== 'undefined') module.exports = { PARTES, MODS, saldoPrevisto, temAporte, calcular, porAno, financeiro,
-  protegerSenha, confereSenha, gerarCodigo, limpaCodigo, hashSenha, cifrar, decifrar, b64, aleatorio };
+  protegerSenha, confereSenha, gerarCodigo, limpaCodigo, hashSenha, cifrar, decifrar, b64, aleatorio,
+  chaveSync, novoSal, cifrarComChave, decifrarComChave, canonico, assinatura, compararDados, ehClienteGoogle, googleValido, backupValido };
